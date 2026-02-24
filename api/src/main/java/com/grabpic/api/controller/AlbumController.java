@@ -7,6 +7,7 @@ import com.grabpic.api.model.SharedAlbum;
 import com.grabpic.api.repository.PhotoRepository;
 import com.grabpic.api.repository.SharedAlbumRepository;
 import com.grabpic.api.service.S3StorageService;
+import com.grabpic.api.service.SqsService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,13 +27,16 @@ public class AlbumController {
     private final S3StorageService s3StorageService;
     private final SharedAlbumRepository albumRepository;
     private final PhotoRepository photoRepository;
+    private final SqsService sqsService;
 
     public AlbumController(S3StorageService s3StorageService,
                            SharedAlbumRepository albumRepository,
-                           PhotoRepository photoRepository) {
+                           PhotoRepository photoRepository,
+                           SqsService sqsService) {
         this.s3StorageService = s3StorageService;
         this.albumRepository = albumRepository;
         this.photoRepository = photoRepository;
+        this.sqsService = sqsService;
     }
 
     @PostMapping
@@ -89,6 +93,14 @@ public class AlbumController {
         }
 
         photoRepository.saveAll(photosToSave);
+
+        // add to queue
+        for (Photo photo : photosToSave) {
+            if (photo.getAccessMode() == AccessMode.PROTECTED) {
+                sqsService.sendPhotoForProcessing(photo.getId().toString(), photo.getStorageUrl());
+            }
+        }
+
         return ResponseEntity.ok().body("Successfully saved " + photosToSave.size() + " photos.");
     }
 
