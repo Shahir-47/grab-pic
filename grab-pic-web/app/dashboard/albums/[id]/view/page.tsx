@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Lock, Globe, Share2, UploadCloud, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { supabase } from "@/lib/supabase"; // Import Supabase client
 
 interface Photo {
 	id: string;
@@ -23,6 +24,7 @@ export default function AlbumViewPage() {
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
+		// Initial Load via Spring Boot
 		const fetchPhotos = async () => {
 			try {
 				const response = await apiFetch(`/api/albums/${albumId}/photos`);
@@ -37,6 +39,35 @@ export default function AlbumViewPage() {
 		};
 
 		if (albumId) fetchPhotos();
+
+		// We listen for any UPDATE to the 'photos' table.
+		const channel = supabase
+			.channel("custom-update-channel")
+			.on(
+				"postgres_changes",
+				{ event: "UPDATE", schema: "public", table: "photos" },
+				(payload) => {
+					console.log("Realtime change received!", payload);
+
+					const updatedPhotoId = payload.new.id;
+					const isNowProcessed = payload.new.processed;
+
+					// Instantly update the React state if this photo is in our album
+					setPhotos((currentPhotos) =>
+						currentPhotos.map((photo) =>
+							photo.id === updatedPhotoId
+								? { ...photo, processed: isNowProcessed }
+								: photo,
+						),
+					);
+				},
+			)
+			.subscribe();
+
+		// Cleanup function: close the WebSocket if the user leaves the page
+		return () => {
+			supabase.removeChannel(channel);
+		};
 	}, [albumId]);
 
 	const copyShareLink = () => {
