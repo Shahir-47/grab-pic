@@ -12,6 +12,6 @@ public class PhotoResponse {
     private String viewUrl;
     private boolean isPublic;
     private boolean processed;
-    int faceCount;
-    List<String> faceBoxes;
+    private int faceCount;
+    private List<String> faceBoxes;
 }

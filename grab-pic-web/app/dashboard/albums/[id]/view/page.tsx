@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Lock, Globe, Share2, UploadCloud, Loader2 } from "lucide-react";
+import {
+	Lock,
+	Globe,
+	Share2,
+	UploadCloud,
+	Loader2,
+	X,
+	UserSearch,
+} from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase"; // Import Supabase client
 
@@ -13,6 +21,8 @@ interface Photo {
 	viewUrl: string;
 	isPublic: boolean;
 	processed: boolean;
+	faceCount: number;
+	faceBoxes: string[];
 }
 
 export default function AlbumViewPage() {
@@ -22,6 +32,9 @@ export default function AlbumViewPage() {
 
 	const [photos, setPhotos] = useState<Photo[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
+
+	const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+	const [imageDims, setImageDims] = useState({ width: 1, height: 1 });
 
 	useEffect(() => {
 		const fetchPhotos = async () => {
@@ -60,6 +73,10 @@ export default function AlbumViewPage() {
 								: photo,
 						),
 					);
+
+					if (isNowProcessed) {
+						fetchPhotos();
+					}
 				},
 			)
 			.subscribe();
@@ -155,13 +172,24 @@ export default function AlbumViewPage() {
 									</span>
 								</div>
 
-								{/* Bottom Badge: AI Processing Status */}
-								<div className="absolute bottom-2 right-2">
-									{!photo.processed && !photo.isPublic && (
+								{/* Bottom Badge: AI Processing Status & View Button */}
+								<div className="absolute bottom-2 right-2 left-2 flex justify-center">
+									{!photo.processed && !photo.isPublic ? (
 										<span className="flex items-center gap-1.5 py-1 px-2.5 rounded-full text-[10px] font-bold bg-amber-500/90 text-white backdrop-blur-md shadow-sm border border-amber-400">
 											<Loader2 className="w-3 h-3 animate-spin" /> Scanning
 											Faces...
 										</span>
+									) : (
+										photo.processed && (
+											<button
+												onClick={() => setSelectedPhoto(photo)}
+												className="flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-lg border border-indigo-400"
+											>
+												<UserSearch className="w-3 h-3" />
+												Scanned ({photo.faceCount || 0}{" "}
+												{photo.faceCount === 1 ? "Person" : "People"})
+											</button>
+										)
 									)}
 								</div>
 							</div>
@@ -169,6 +197,88 @@ export default function AlbumViewPage() {
 					</div>
 				)}
 			</div>
+
+			{/* --- MODAL FOR VIEWING FACES --- */}
+			{selectedPhoto && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
+					<div className="relative max-w-4xl w-full bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800">
+						{/* Modal Header */}
+						<div className="flex justify-between items-center p-6 border-b border-zinc-800">
+							<div>
+								<h3 className="text-white font-bold text-lg">
+									AI Inspection Mode
+								</h3>
+								<p className="text-zinc-400 text-xs">
+									Viewing identified faces and bounding boxes
+								</p>
+							</div>
+							<button
+								onClick={() => {
+									setSelectedPhoto(null);
+									setImageDims({ width: 1, height: 1 }); // Reset dims on close
+								}}
+								className="p-2 bg-zinc-800 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors"
+							>
+								<X className="w-6 h-6" />
+							</button>
+						</div>
+
+						{/* Image Canvas with Overlays */}
+						<div className="relative w-full max-h-[75vh] flex justify-center items-center bg-black overflow-hidden p-4">
+							<div className="relative inline-block max-w-full max-h-full">
+								<img
+									src={selectedPhoto.viewUrl}
+									alt="Inspection"
+									className="max-w-full max-h-[70vh] w-auto h-auto block shadow-2xl"
+									onLoad={(e) => {
+										setImageDims({
+											width: e.currentTarget.naturalWidth,
+											height: e.currentTarget.naturalHeight,
+										});
+									}}
+								/>
+
+								{/* Draw AI Bounding Boxes using True Percentage Math */}
+								{selectedPhoto.faceBoxes?.map((boxStr, idx) => {
+									const box = JSON.parse(boxStr);
+									return (
+										<div
+											key={idx}
+											className="absolute border-2 border-indigo-400 bg-indigo-500/10 rounded-lg shadow-[0_0_15px_rgba(129,140,248,0.5)] transition-all hover:bg-indigo-500/30"
+											style={{
+												left: `${(box.x / imageDims.width) * 100}%`,
+												top: `${(box.y / imageDims.height) * 100}%`,
+												width: `${(box.w / imageDims.width) * 100}%`,
+												height: `${(box.h / imageDims.height) * 100}%`,
+											}}
+										>
+											<span className="absolute -top-6 left-0 bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase whitespace-nowrap shadow-sm">
+												ID: {idx + 1}
+											</span>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+
+						<div className="p-6 bg-zinc-900/50 flex justify-between items-center">
+							<span className="text-zinc-400 text-sm italic">
+								Total {selectedPhoto.faceCount || 0} signatures recorded.
+							</span>
+							<Button
+								onClick={() => {
+									setSelectedPhoto(null);
+									setImageDims({ width: 1, height: 1 });
+								}}
+								variant="secondary"
+								className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
+							>
+								Close Inspection
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
