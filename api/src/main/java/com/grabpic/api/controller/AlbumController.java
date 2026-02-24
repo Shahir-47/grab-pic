@@ -157,4 +157,18 @@ public class AlbumController {
             return ResponseEntity.internalServerError().body("Failed to delete album");
         }
     }
+
+    @GetMapping("/{albumId}/guest/details")
+    public ResponseEntity<?> getGuestAlbumDetails(@PathVariable UUID albumId) {
+        Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+
+        if (albumOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        SharedAlbum album = albumOpt.get();
+        return ResponseEntity.ok().body(
+                java.util.Map.of("title", album.getTitle())
+        );
+    }
 }

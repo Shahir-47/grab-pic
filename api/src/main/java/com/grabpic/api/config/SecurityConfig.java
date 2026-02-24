@@ -28,8 +28,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Later, add .requestMatchers("/api/albums/*/guest").permitAll()
-                        .anyRequest().authenticated() // All endpoints require a valid Supabase token
+                        .requestMatchers("/api/albums/{albumId}/guest/details").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
 
