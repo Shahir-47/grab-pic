@@ -55,7 +55,6 @@ public class AlbumController {
         return ResponseEntity.ok(albumRepository.findByHostId(hostId));
     }
     
-
     @GetMapping("/{albumId}/upload-urls")
     public ResponseEntity<List<String>> getUploadUrls(
             @PathVariable UUID albumId,
