@@ -171,4 +171,26 @@ public class AlbumController {
                 java.util.Map.of("title", album.getTitle())
         );
     }
+
+    @PutMapping("/{albumId}/photos/{photoId}/privacy")
+    public ResponseEntity<?> togglePhotoPrivacy(@PathVariable UUID albumId, @PathVariable UUID photoId, @RequestParam boolean makePublic) {
+        try {
+            Optional<Photo> photoOpt = photoRepository.findById(photoId);
+            if (photoOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Photo photo = photoOpt.get();
+            if (!photo.getAlbum().getId().equals(albumId)) {
+                return ResponseEntity.badRequest().body("Photo does not belong to this album");
+            }
+
+            photo.setAccessMode(makePublic ? AccessMode.PUBLIC : AccessMode.PROTECTED);
+            photoRepository.save(photo);
+
+            return ResponseEntity.ok().body("Privacy updated.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to update privacy");
+        }
+    }
 }
