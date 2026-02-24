@@ -130,7 +130,7 @@ export default function AlbumUploadPage() {
 			if (successfulPhotos.length > 0) {
 				const payload = {
 					photos: successfulPhotos.map((p) => ({
-						storageUrl: `albums/${albumId}/${p.file.name}`,
+						storageUrl: p.actualS3Key,
 						isPublic: p.isPublic,
 					})),
 				};
