@@ -1,10 +1,12 @@
 package com.grabpic.api.model;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
 
+@Data
 @Entity
 @Table(name = "shared_albums")
 public class SharedAlbum {

@@ -1,8 +1,10 @@
 package com.grabpic.api.model;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.util.UUID;
 
+@Data
 @Entity
 @Table(name = "photos")
 public class Photo {
