@@ -82,7 +82,6 @@ export default function AlbumUploadPage() {
 				throw new Error("Failed to get secure upload links from backend");
 
 			const presignedUrls: string[] = await response.json();
-
 			const uploadPromises = pendingPhotos.map(async (photo, index) => {
 				setPhotos((prev) =>
 					prev.map((p) =>
@@ -91,7 +90,9 @@ export default function AlbumUploadPage() {
 				);
 
 				try {
-					const uploadRes = await fetch(presignedUrls[index], {
+					const uploadUrl = presignedUrls[index];
+
+					const uploadRes = await fetch(uploadUrl, {
 						method: "PUT",
 						body: photo.file,
 						headers: {
@@ -105,6 +106,11 @@ export default function AlbumUploadPage() {
 								p.id === photo.id ? { ...p, status: "success" } : p,
 							),
 						);
+
+						const urlObj = new URL(uploadUrl);
+						const actualS3Key = urlObj.pathname.slice(1);
+
+						return { ...photo, status: "success", actualS3Key };
 					} else {
 						throw new Error("S3 Upload Failed");
 					}
@@ -114,12 +120,12 @@ export default function AlbumUploadPage() {
 							p.id === photo.id ? { ...p, status: "error" } : p,
 						),
 					);
+					return null;
 				}
 			});
 
-			await Promise.all(uploadPromises);
-
-			const successfulPhotos = photos.filter((p) => p.status === "success");
+			const results = await Promise.all(uploadPromises);
+			const successfulPhotos = results.filter((p) => p !== null);
 
 			if (successfulPhotos.length > 0) {
 				const payload = {
