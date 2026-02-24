@@ -16,6 +16,8 @@ import {
 	EyeOff,
 	Download,
 	Trash2,
+	CheckSquare,
+	Check,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -39,8 +41,10 @@ export default function AlbumViewPage() {
 
 	const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 	const [imageDims, setImageDims] = useState({ width: 1, height: 1 });
-
 	const [showBoxes, setShowBoxes] = useState(true);
+
+	const [isSelectionMode, setIsSelectionMode] = useState(false);
+	const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
 
 	useEffect(() => {
 		const fetchPhotos = async () => {
@@ -80,9 +84,7 @@ export default function AlbumViewPage() {
 						),
 					);
 
-					if (isNowProcessed) {
-						fetchPhotos();
-					}
+					if (isNowProcessed) fetchPhotos();
 				},
 			)
 			.subscribe();
@@ -93,12 +95,66 @@ export default function AlbumViewPage() {
 	}, [albumId]);
 
 	const copyShareLink = () => {
-		// Later, this link will be the "Guest View" portal
 		const url = `${window.location.origin}/albums/${albumId}/guest`;
 		navigator.clipboard.writeText(url);
 		alert("Guest link copied to clipboard!");
 	};
 
+	const toggleSelection = (photoId: string) => {
+		setSelectedPhotoIds((prev) =>
+			prev.includes(photoId)
+				? prev.filter((id) => id !== photoId)
+				: [...prev, photoId],
+		);
+	};
+
+	const handleDeleteSelected = async () => {
+		if (selectedPhotoIds.length === 0) return;
+		const confirmDelete = window.confirm(
+			`Are you sure you want to delete ${selectedPhotoIds.length} photos?`,
+		);
+		if (!confirmDelete) return;
+
+		try {
+			// We loop through and delete them using your existing single-delete endpoint
+			for (const id of selectedPhotoIds) {
+				await apiFetch(`/api/albums/${albumId}/photos/${id}`, {
+					method: "DELETE",
+				});
+			}
+
+			// Remove them from the UI
+			setPhotos((prev) => prev.filter((p) => !selectedPhotoIds.includes(p.id)));
+			setSelectedPhotoIds([]);
+			setIsSelectionMode(false);
+		} catch (error) {
+			console.error("Batch delete failed:", error);
+			alert("Failed to delete some photos.");
+		}
+	};
+
+	const handleDeleteAlbum = async () => {
+		const confirmDelete = window.confirm(
+			"WARNING: Are you sure you want to permanently delete this ENTIRE album and all its photos? This cannot be undone.",
+		);
+		if (!confirmDelete) return;
+
+		try {
+			const res = await apiFetch(`/api/albums/${albumId}`, {
+				method: "DELETE",
+			});
+			if (res.ok) {
+				// Kick the host back to their dashboard
+				router.push("/dashboard");
+			} else {
+				alert("Failed to delete album from the server.");
+			}
+		} catch (error) {
+			console.error("Delete album failed:", error);
+		}
+	};
+
+	// Original single-photo download and delete functions
 	const handleDownload = async () => {
 		if (!selectedPhoto) return;
 		try {
@@ -118,7 +174,7 @@ export default function AlbumViewPage() {
 		}
 	};
 
-	const handleDelete = async () => {
+	const handleDeleteSingle = async () => {
 		if (!selectedPhoto) return;
 		const confirmDelete = window.confirm(
 			"Are you sure you want to permanently remove this photo?",
@@ -128,9 +184,7 @@ export default function AlbumViewPage() {
 		try {
 			const res = await apiFetch(
 				`/api/albums/${albumId}/photos/${selectedPhoto.id}`,
-				{
-					method: "DELETE",
-				},
+				{ method: "DELETE" },
 			);
 			if (res.ok) {
 				setPhotos((prev) => prev.filter((p) => p.id !== selectedPhoto.id));
@@ -166,20 +220,64 @@ export default function AlbumViewPage() {
 						</p>
 					</div>
 
-					<div className="flex gap-3 w-full sm:w-auto">
-						<Button
-							onClick={() => router.push(`/dashboard/albums/${albumId}`)}
-							variant="outline"
-							className="w-full sm:w-auto"
-						>
-							<UploadCloud className="w-4 h-4 mr-2" /> Add More
-						</Button>
-						<Button
-							onClick={copyShareLink}
-							className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
-						>
-							<Share2 className="w-4 h-4 mr-2" /> Share Album
-						</Button>
+					<div className="flex gap-2 w-full sm:w-auto flex-wrap">
+						{isSelectionMode ? (
+							// Toolbar when selecting multiple photos
+							<>
+								<span className="flex items-center text-sm font-bold text-zinc-600 dark:text-zinc-300 mr-2">
+									{selectedPhotoIds.length} Selected
+								</span>
+								<Button
+									onClick={handleDeleteSelected}
+									variant="destructive"
+									disabled={selectedPhotoIds.length === 0}
+									className="bg-red-600 hover:bg-red-700 text-white"
+								>
+									<Trash2 className="w-4 h-4 mr-2" /> Delete Selected
+								</Button>
+								<Button
+									onClick={() => {
+										setIsSelectionMode(false);
+										setSelectedPhotoIds([]);
+									}}
+									variant="outline"
+								>
+									Cancel
+								</Button>
+							</>
+						) : (
+							// Standard Toolbar
+							<>
+								<Button
+									onClick={() => setIsSelectionMode(true)}
+									variant="outline"
+									disabled={photos.length === 0}
+								>
+									<CheckSquare className="w-4 h-4 mr-2" /> Select
+								</Button>
+								<Button
+									onClick={() => router.push(`/dashboard/albums/${albumId}`)}
+									variant="outline"
+								>
+									<UploadCloud className="w-4 h-4 mr-2" /> Add More
+								</Button>
+								<Button
+									onClick={copyShareLink}
+									className="bg-indigo-600 hover:bg-indigo-700 text-white"
+								>
+									<Share2 className="w-4 h-4 mr-2" /> Share
+								</Button>
+								{/* Delete Album Button */}
+								<Button
+									onClick={handleDeleteAlbum}
+									variant="outline"
+									className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 px-3"
+									title="Delete Entire Album"
+								>
+									<Trash2 className="w-4 h-4" />
+								</Button>
+							</>
+						)}
 					</div>
 				</div>
 
@@ -193,7 +291,12 @@ export default function AlbumViewPage() {
 						{photos.map((photo) => (
 							<div
 								key={photo.id}
-								className="group relative aspect-square bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-sm"
+								onClick={() => {
+									if (isSelectionMode) toggleSelection(photo.id);
+								}}
+								className={`group relative aspect-square bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden shadow-sm transition-all
+                                    ${isSelectionMode ? "cursor-pointer" : ""}
+                                    ${selectedPhotoIds.includes(photo.id) ? "ring-4 ring-indigo-500 scale-[0.98]" : "border border-zinc-200 dark:border-zinc-700"}`}
 							>
 								<Image
 									src={photo.viewUrl}
@@ -202,6 +305,19 @@ export default function AlbumViewPage() {
 									className="object-cover transition-transform duration-500 group-hover:scale-105"
 									unoptimized
 								/>
+
+								{isSelectionMode && (
+									<div className="absolute top-2 right-2 z-10">
+										<div
+											className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shadow-md
+                                            ${selectedPhotoIds.includes(photo.id) ? "bg-indigo-600 border-indigo-600" : "bg-black/30 border-white/80 hover:border-white"}`}
+										>
+											{selectedPhotoIds.includes(photo.id) && (
+												<Check className="w-4 h-4 text-white" />
+											)}
+										</div>
+									</div>
+								)}
 
 								<div className="absolute top-2 left-2">
 									<span
@@ -224,13 +340,20 @@ export default function AlbumViewPage() {
 								<div className="absolute bottom-2 right-2 left-2 flex justify-center">
 									{!photo.processed && !photo.isPublic ? (
 										<span className="flex items-center gap-1.5 py-1 px-2.5 rounded-full text-[10px] font-bold bg-amber-500/90 text-white backdrop-blur-md shadow-sm border border-amber-400">
-											<Loader2 className="w-3 h-3 animate-spin" /> Scanning
-											Faces...
+											<Loader2 className="w-3 h-3 animate-spin" /> Scanning...
 										</span>
 									) : (
 										photo.processed && (
 											<button
-												onClick={() => setSelectedPhoto(photo)}
+												onClick={(e) => {
+													// Prevent modal from opening if we are just selecting photos
+													if (isSelectionMode) {
+														e.stopPropagation();
+														toggleSelection(photo.id);
+													} else {
+														setSelectedPhoto(photo);
+													}
+												}}
 												className="flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-lg border border-indigo-400"
 											>
 												<UserSearch className="w-3 h-3" />
@@ -246,10 +369,10 @@ export default function AlbumViewPage() {
 				)}
 			</div>
 
+			{/* --- MODAL --- */}
 			{selectedPhoto && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
 					<div className="relative max-w-5xl w-full bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col max-h-[90vh]">
-						{/* Modal Header & Toolbar */}
 						<div className="flex justify-between items-center p-4 sm:p-6 border-b border-zinc-800">
 							<div>
 								<h3 className="text-white font-bold text-lg">
@@ -260,7 +383,6 @@ export default function AlbumViewPage() {
 								</p>
 							</div>
 
-							{/* ACTION BUTTONS */}
 							<div className="flex items-center gap-2">
 								<Button
 									onClick={() => setShowBoxes(!showBoxes)}
@@ -292,7 +414,7 @@ export default function AlbumViewPage() {
 								</Button>
 
 								<Button
-									onClick={handleDelete}
+									onClick={handleDeleteSingle}
 									variant="secondary"
 									size="sm"
 									className="bg-zinc-800 text-zinc-300 hover:bg-red-600 hover:text-white border-zinc-700 hover:border-red-500"
@@ -307,7 +429,7 @@ export default function AlbumViewPage() {
 									onClick={() => {
 										setSelectedPhoto(null);
 										setImageDims({ width: 1, height: 1 });
-										setShowBoxes(true); // Reset toggle on close
+										setShowBoxes(true);
 									}}
 									className="p-2 bg-zinc-800 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors ml-1"
 								>
@@ -316,7 +438,6 @@ export default function AlbumViewPage() {
 							</div>
 						</div>
 
-						{/* Image Canvas with Overlays */}
 						<div className="relative flex-1 flex justify-center items-center bg-black overflow-hidden p-4 min-h-[50vh]">
 							<div className="relative inline-block max-w-full max-h-full">
 								<img
@@ -331,7 +452,6 @@ export default function AlbumViewPage() {
 									}}
 								/>
 
-								{/* Draw AI Bounding Boxes ONLY if showBoxes is true */}
 								{showBoxes &&
 									selectedPhoto.faceBoxes?.map((boxStr, idx) => {
 										const box = JSON.parse(boxStr);
