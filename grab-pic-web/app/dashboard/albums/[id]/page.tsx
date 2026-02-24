@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
 	UploadCloud,
@@ -26,6 +26,7 @@ interface UploadPhoto {
 
 export default function AlbumUploadPage() {
 	const params = useParams<{ id: string }>();
+	const router = useRouter();
 	const albumId = params?.id || "unknown-album";
 
 	const [photos, setPhotos] = useState<UploadPhoto[]>([]);
@@ -116,6 +117,37 @@ export default function AlbumUploadPage() {
 			});
 
 			await Promise.all(uploadPromises);
+
+			// Tell Spring Boot to save the successful uploads to the database
+
+			const successfulPhotos = photos.filter((p) => p.status === "success");
+
+			if (successfulPhotos.length > 0) {
+				const payload = {
+					photos: successfulPhotos.map((p) => ({
+						storageUrl: `albums/${albumId}/${p.file.name}`,
+						isPublic: p.isPublic,
+					})),
+				};
+
+				const dbResponse = await fetch(
+					`http://localhost:8080/api/albums/${albumId}/photos`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload),
+					},
+				);
+
+				if (!dbResponse.ok) {
+					console.error("AWS Upload succeeded, but Database save failed.");
+					alert("Photos uploaded to cloud, but failed to save to album.");
+				} else {
+					console.log("Successfully saved to database!");
+					setPhotos([]);
+					router.push(`/dashboard/albums/${albumId}/view`);
+				}
+			}
 		} catch (error) {
 			console.error("Upload process failed:", error);
 			alert(
