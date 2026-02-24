@@ -32,6 +32,21 @@ public class AlbumController {
         this.photoRepository = photoRepository;
     }
 
+    @PostMapping
+    public ResponseEntity<SharedAlbum> createAlbum(@RequestBody com.grabpic.api.dto.AlbumCreateRequest request) {
+        SharedAlbum album = new SharedAlbum();
+        album.setTitle(request.getTitle());
+        album.setHostId("test-host-user-123");
+
+        SharedAlbum savedAlbum = albumRepository.save(album);
+        return ResponseEntity.ok(savedAlbum);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<SharedAlbum>> getAllAlbums() {
+        return ResponseEntity.ok(albumRepository.findAll());
+    }
+
     @GetMapping("/{albumId}/upload-urls")
     public ResponseEntity<List<String>> getUploadUrls(
             @PathVariable UUID albumId,
@@ -67,5 +82,27 @@ public class AlbumController {
 
         photoRepository.saveAll(photosToSave);
         return ResponseEntity.ok().body("Successfully saved " + photosToSave.size() + " photos.");
+    }
+
+    @GetMapping("/{albumId}/photos")
+    public ResponseEntity<List<com.grabpic.api.dto.PhotoResponse>> getAlbumPhotos(@PathVariable UUID albumId) {
+
+        List<Photo> photos = photoRepository.findByAlbumId(albumId);
+
+        List<com.grabpic.api.dto.PhotoResponse> response = new ArrayList<>();
+
+        for (Photo photo : photos) {
+            String secureViewUrl = s3StorageService.generateViewUrl(photo.getStorageUrl());
+            boolean isPublic = photo.getAccessMode() == AccessMode.PUBLIC;
+
+            response.add(new com.grabpic.api.dto.PhotoResponse(
+                    photo.getId().toString(),
+                    secureViewUrl,
+                    isPublic,
+                    photo.isProcessed()
+            ));
+        }
+
+        return ResponseEntity.ok(response);
     }
 }
