@@ -15,6 +15,7 @@ import {
 	AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
+import { apiFetch } from "@/lib/api";
 
 interface UploadPhoto {
 	id: string;
@@ -74,8 +75,8 @@ export default function AlbumUploadPage() {
 		setIsUploading(true);
 
 		try {
-			const response = await fetch(
-				`http://localhost:8080/api/albums/${albumId}/upload-urls?count=${pendingPhotos.length}`,
+			const response = await apiFetch(
+				`/api/albums/${albumId}/upload-urls?count=${pendingPhotos.length}`,
 			);
 			if (!response.ok)
 				throw new Error("Failed to get secure upload links from backend");
@@ -118,8 +119,6 @@ export default function AlbumUploadPage() {
 
 			await Promise.all(uploadPromises);
 
-			// Tell Spring Boot to save the successful uploads to the database
-
 			const successfulPhotos = photos.filter((p) => p.status === "success");
 
 			if (successfulPhotos.length > 0) {
@@ -130,14 +129,11 @@ export default function AlbumUploadPage() {
 					})),
 				};
 
-				const dbResponse = await fetch(
-					`http://localhost:8080/api/albums/${albumId}/photos`,
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(payload),
-					},
-				);
+				const dbResponse = await apiFetch(`/api/albums/${albumId}/photos`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(payload),
+				});
 
 				if (!dbResponse.ok) {
 					console.error("AWS Upload succeeded, but Database save failed.");

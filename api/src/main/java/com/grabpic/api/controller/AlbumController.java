@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+
 @RestController
 @RequestMapping("/api/albums")
 @CrossOrigin(origins = "http://localhost:3000")
@@ -33,19 +36,25 @@ public class AlbumController {
     }
 
     @PostMapping
-    public ResponseEntity<SharedAlbum> createAlbum(@RequestBody com.grabpic.api.dto.AlbumCreateRequest request) {
+    public ResponseEntity<SharedAlbum> createAlbum(
+            @RequestBody com.grabpic.api.dto.AlbumCreateRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+
         SharedAlbum album = new SharedAlbum();
         album.setTitle(request.getTitle());
-        album.setHostId("test-host-user-123");
+
+        album.setHostId(jwt.getSubject());
 
         SharedAlbum savedAlbum = albumRepository.save(album);
         return ResponseEntity.ok(savedAlbum);
     }
 
     @GetMapping
-    public ResponseEntity<List<SharedAlbum>> getAllAlbums() {
-        return ResponseEntity.ok(albumRepository.findAll());
+    public ResponseEntity<List<SharedAlbum>> getAllAlbums(@AuthenticationPrincipal Jwt jwt) {
+        String hostId = jwt.getSubject();
+        return ResponseEntity.ok(albumRepository.findByHostId(hostId));
     }
+    
 
     @GetMapping("/{albumId}/upload-urls")
     public ResponseEntity<List<String>> getUploadUrls(

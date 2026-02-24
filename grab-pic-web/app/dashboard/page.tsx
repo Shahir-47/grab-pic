@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
 import {
 	Plus,
 	Image as ImageIcon,
@@ -31,7 +32,7 @@ export default function DashboardPage() {
 
 	const fetchAlbums = async () => {
 		try {
-			const res = await fetch("http://localhost:8080/api/albums");
+			const res = await apiFetch("/api/albums");
 			if (res.ok) {
 				const data = await res.json();
 				setAlbums(data);
@@ -49,7 +50,7 @@ export default function DashboardPage() {
 
 		setIsCreating(true);
 		try {
-			const res = await fetch("http://localhost:8080/api/albums", {
+			const res = await apiFetch("/api/albums", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ title: newAlbumTitle }),
@@ -57,7 +58,6 @@ export default function DashboardPage() {
 
 			if (res.ok) {
 				const newAlbum = await res.json();
-				// Instantly redirect the user to their newly created album's upload page!
 				router.push(`/dashboard/albums/${newAlbum.id}`);
 			}
 		} catch (error) {
@@ -148,7 +148,7 @@ export default function DashboardPage() {
 										variant="outline"
 										className="w-full text-xs"
 										onClick={(e) => {
-											e.stopPropagation(); // Prevent card click
+											e.stopPropagation();
 											router.push(`/dashboard/albums/${album.id}`);
 										}}
 									>

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Lock, Globe, Share2, UploadCloud, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface Photo {
 	id: string;
@@ -24,9 +25,7 @@ export default function AlbumViewPage() {
 	useEffect(() => {
 		const fetchPhotos = async () => {
 			try {
-				const response = await fetch(
-					`http://localhost:8080/api/albums/${albumId}/photos`,
-				);
+				const response = await apiFetch(`/api/albums/${albumId}/photos`);
 				if (!response.ok) throw new Error("Failed to fetch photos");
 				const data = await response.json();
 				setPhotos(data);
