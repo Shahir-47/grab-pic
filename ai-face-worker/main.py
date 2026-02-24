@@ -87,6 +87,7 @@ def process_message(message):
     except Exception as e:
         print(f"    -> Database Error: {e}")
         conn.rollback()
+        raise e
     finally:
         cur.close()
         conn.close()
