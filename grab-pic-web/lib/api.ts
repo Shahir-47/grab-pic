@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"; // <-- Import the initialized instance directly!
+import { supabase } from "@/lib/supabase";
 
 const API_BASE_URL = "http://localhost:8080";
 

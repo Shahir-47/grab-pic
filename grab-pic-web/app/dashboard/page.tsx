@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import {
-	Plus,
 	Image as ImageIcon,
 	Loader2,
 	Calendar,
@@ -59,9 +58,14 @@ export default function DashboardPage() {
 			if (res.ok) {
 				const newAlbum = await res.json();
 				router.push(`/dashboard/albums/${newAlbum.id}`);
+			} else {
+				console.error("Server error. Status:", res.status);
+				alert("Failed to create album. Are you fully logged in?");
+				setIsCreating(false);
 			}
 		} catch (error) {
-			console.error("Failed to create album", error);
+			console.error("Network failed to connect to Spring Boot:", error);
+			alert("Network error. Is your Spring Boot server running?");
 			setIsCreating(false);
 		}
 	};
@@ -83,31 +87,31 @@ export default function DashboardPage() {
 
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 					{/* Create New Album Card */}
-					<div className="bg-white dark:bg-zinc-900 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl p-6 flex flex-col justify-center items-center text-center transition-hover hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20">
-						<div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mb-4">
-							<Plus className="w-6 h-6" />
-						</div>
-						<h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-							Create New Album
+					<div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 rounded-2xl p-6 flex flex-col justify-center">
+						<h3 className="font-bold text-lg text-indigo-900 dark:text-indigo-100 mb-1">
+							Start a New Event
 						</h3>
+						<p className="text-sm text-indigo-700/70 dark:text-indigo-300/70 mb-4">
+							Give your album a name to start uploading.
+						</p>
 						<form onSubmit={handleCreateAlbum} className="w-full space-y-3">
 							<input
 								type="text"
 								placeholder="e.g., Sarah's Wedding 2026"
-								className="w-full text-sm px-3 py-2 border border-zinc-300 dark:border-zinc-800 rounded-md bg-transparent dark:text-white"
+								className="w-full text-sm px-4 py-3 border border-indigo-200 dark:border-indigo-800 rounded-lg bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white"
 								value={newAlbumTitle}
 								onChange={(e) => setNewAlbumTitle(e.target.value)}
 								disabled={isCreating}
 							/>
 							<Button
 								type="submit"
-								className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+								className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5"
 								disabled={isCreating || !newAlbumTitle}
 							>
 								{isCreating ? (
-									<Loader2 className="w-4 h-4 animate-spin" />
+									<Loader2 className="w-5 h-5 animate-spin" />
 								) : (
-									"Create & Upload"
+									"Create & Upload Photos"
 								)}
 							</Button>
 						</form>

@@ -11,6 +11,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 
 import java.util.List;
 
@@ -37,7 +38,9 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri(jwksUrl).build();
+        return NimbusJwtDecoder.withJwkSetUri(jwksUrl)
+                .jwsAlgorithm(SignatureAlgorithm.ES256)
+                .build();
     }
 
     // Centralized CORS configuration to allow Next.js to talk to Spring Boot
