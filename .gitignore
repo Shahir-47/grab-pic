@@ -1,0 +1,15 @@
+# Environments
+venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Test Images
+*.jpg
+*.jfif
+*.webp
+*.png
+
+# Environment Variables (for later when we add secrets)
+.env
