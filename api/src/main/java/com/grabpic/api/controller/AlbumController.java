@@ -108,18 +108,30 @@ public class AlbumController {
     public ResponseEntity<List<com.grabpic.api.dto.PhotoResponse>> getAlbumPhotos(@PathVariable UUID albumId) {
 
         List<Photo> photos = photoRepository.findByAlbumId(albumId);
-
         List<com.grabpic.api.dto.PhotoResponse> response = new ArrayList<>();
 
         for (Photo photo : photos) {
             String secureViewUrl = s3StorageService.generateViewUrl(photo.getStorageUrl());
             boolean isPublic = photo.getAccessMode() == AccessMode.PUBLIC;
 
+            // Safely count faces and extract the JSON bounding boxes
+            int faceCount = 0;
+            List<String> boxes = new ArrayList<>();
+
+            if (photo.getFaces() != null) {
+                faceCount = photo.getFaces().size();
+                for (com.grabpic.api.model.PhotoEmbedding face : photo.getFaces()) {
+                    boxes.add(face.getBoxArea());
+                }
+            }
+
             response.add(new com.grabpic.api.dto.PhotoResponse(
                     photo.getId().toString(),
                     secureViewUrl,
                     isPublic,
-                    photo.isProcessed()
+                    photo.isProcessed(),
+                    faceCount,
+                    boxes
             ));
         }
 
