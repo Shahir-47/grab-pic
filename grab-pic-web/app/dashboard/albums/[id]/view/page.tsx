@@ -24,7 +24,6 @@ export default function AlbumViewPage() {
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
-		// Initial Load via Spring Boot
 		const fetchPhotos = async () => {
 			try {
 				const response = await apiFetch(`/api/albums/${albumId}/photos`);
@@ -40,19 +39,20 @@ export default function AlbumViewPage() {
 
 		if (albumId) fetchPhotos();
 
-		// We listen for any UPDATE to the 'photos' table.
 		const channel = supabase
-			.channel("custom-update-channel")
+			.channel(`album-updates-${albumId}`)
 			.on(
 				"postgres_changes",
-				{ event: "UPDATE", schema: "public", table: "photos" },
+				{
+					event: "UPDATE",
+					schema: "public",
+					table: "photos",
+					filter: `album_id=eq.${albumId}`,
+				},
 				(payload) => {
-					console.log("Realtime change received!", payload);
-
 					const updatedPhotoId = payload.new.id;
 					const isNowProcessed = payload.new.processed;
 
-					// Instantly update the React state if this photo is in our album
 					setPhotos((currentPhotos) =>
 						currentPhotos.map((photo) =>
 							photo.id === updatedPhotoId
@@ -64,7 +64,6 @@ export default function AlbumViewPage() {
 			)
 			.subscribe();
 
-		// Cleanup function: close the WebSocket if the user leaves the page
 		return () => {
 			supabase.removeChannel(channel);
 		};
