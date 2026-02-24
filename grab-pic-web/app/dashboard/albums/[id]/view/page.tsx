@@ -12,9 +12,13 @@ import {
 	Loader2,
 	X,
 	UserSearch,
+	Eye,
+	EyeOff,
+	Download,
+	Trash2,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { supabase } from "@/lib/supabase"; // Import Supabase client
+import { supabase } from "@/lib/supabase";
 
 interface Photo {
 	id: string;
@@ -35,6 +39,8 @@ export default function AlbumViewPage() {
 
 	const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 	const [imageDims, setImageDims] = useState({ width: 1, height: 1 });
+
+	const [showBoxes, setShowBoxes] = useState(true);
 
 	useEffect(() => {
 		const fetchPhotos = async () => {
@@ -91,6 +97,50 @@ export default function AlbumViewPage() {
 		const url = `${window.location.origin}/albums/${albumId}/guest`;
 		navigator.clipboard.writeText(url);
 		alert("Guest link copied to clipboard!");
+	};
+
+	const handleDownload = async () => {
+		if (!selectedPhoto) return;
+		try {
+			const response = await fetch(selectedPhoto.viewUrl);
+			const blob = await response.blob();
+			const url = window.URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = `grabpic-${selectedPhoto.id}.jpg`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Download failed:", error);
+			alert("Failed to download image.");
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!selectedPhoto) return;
+		const confirmDelete = window.confirm(
+			"Are you sure you want to permanently remove this photo?",
+		);
+		if (!confirmDelete) return;
+
+		try {
+			const res = await apiFetch(
+				`/api/albums/${albumId}/photos/${selectedPhoto.id}`,
+				{
+					method: "DELETE",
+				},
+			);
+			if (res.ok) {
+				setPhotos((prev) => prev.filter((p) => p.id !== selectedPhoto.id));
+				setSelectedPhoto(null);
+			} else {
+				alert("Failed to delete photo from the server.");
+			}
+		} catch (error) {
+			console.error("Delete failed:", error);
+		}
 	};
 
 	if (isLoading) {
@@ -150,10 +200,9 @@ export default function AlbumViewPage() {
 									alt="Album Photo"
 									fill
 									className="object-cover transition-transform duration-500 group-hover:scale-105"
-									unoptimized // Required for S3 Presigned URLs in Next.js
+									unoptimized
 								/>
 
-								{/* Top Badge: Privacy Status */}
 								<div className="absolute top-2 left-2">
 									<span
 										className={`flex items-center gap-1.5 py-1 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md shadow-sm border
@@ -172,7 +221,6 @@ export default function AlbumViewPage() {
 									</span>
 								</div>
 
-								{/* Bottom Badge: AI Processing Status & View Button */}
 								<div className="absolute bottom-2 right-2 left-2 flex justify-center">
 									{!photo.processed && !photo.isPublic ? (
 										<span className="flex items-center gap-1.5 py-1 px-2.5 rounded-full text-[10px] font-bold bg-amber-500/90 text-white backdrop-blur-md shadow-sm border border-amber-400">
@@ -198,38 +246,83 @@ export default function AlbumViewPage() {
 				)}
 			</div>
 
-			{/* --- MODAL FOR VIEWING FACES --- */}
 			{selectedPhoto && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-					<div className="relative max-w-4xl w-full bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800">
-						{/* Modal Header */}
-						<div className="flex justify-between items-center p-6 border-b border-zinc-800">
+					<div className="relative max-w-5xl w-full bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col max-h-[90vh]">
+						{/* Modal Header & Toolbar */}
+						<div className="flex justify-between items-center p-4 sm:p-6 border-b border-zinc-800">
 							<div>
 								<h3 className="text-white font-bold text-lg">
 									AI Inspection Mode
 								</h3>
-								<p className="text-zinc-400 text-xs">
-									Viewing identified faces and bounding boxes
+								<p className="text-zinc-400 text-xs mt-0.5">
+									{selectedPhoto.faceCount} signatures found.
 								</p>
 							</div>
-							<button
-								onClick={() => {
-									setSelectedPhoto(null);
-									setImageDims({ width: 1, height: 1 }); // Reset dims on close
-								}}
-								className="p-2 bg-zinc-800 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors"
-							>
-								<X className="w-6 h-6" />
-							</button>
+
+							{/* ACTION BUTTONS */}
+							<div className="flex items-center gap-2">
+								<Button
+									onClick={() => setShowBoxes(!showBoxes)}
+									variant="secondary"
+									size="sm"
+									className="bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white border-zinc-700"
+									title={
+										showBoxes ? "Hide Bounding Boxes" : "Show Bounding Boxes"
+									}
+								>
+									{showBoxes ? (
+										<EyeOff className="w-4 h-4" />
+									) : (
+										<Eye className="w-4 h-4" />
+									)}
+									<span className="hidden sm:inline ml-2">
+										{showBoxes ? "Hide Boxes" : "Show Boxes"}
+									</span>
+								</Button>
+
+								<Button
+									onClick={handleDownload}
+									variant="secondary"
+									size="sm"
+									className="bg-zinc-800 text-zinc-300 hover:bg-indigo-600 hover:text-white border-zinc-700 hover:border-indigo-500"
+									title="Download Original Photo"
+								>
+									<Download className="w-4 h-4" />
+								</Button>
+
+								<Button
+									onClick={handleDelete}
+									variant="secondary"
+									size="sm"
+									className="bg-zinc-800 text-zinc-300 hover:bg-red-600 hover:text-white border-zinc-700 hover:border-red-500"
+									title="Delete Photo"
+								>
+									<Trash2 className="w-4 h-4" />
+								</Button>
+
+								<div className="w-px h-6 bg-zinc-700 mx-1"></div>
+
+								<button
+									onClick={() => {
+										setSelectedPhoto(null);
+										setImageDims({ width: 1, height: 1 });
+										setShowBoxes(true); // Reset toggle on close
+									}}
+									className="p-2 bg-zinc-800 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors ml-1"
+								>
+									<X className="w-5 h-5" />
+								</button>
+							</div>
 						</div>
 
 						{/* Image Canvas with Overlays */}
-						<div className="relative w-full max-h-[75vh] flex justify-center items-center bg-black overflow-hidden p-4">
+						<div className="relative flex-1 flex justify-center items-center bg-black overflow-hidden p-4 min-h-[50vh]">
 							<div className="relative inline-block max-w-full max-h-full">
 								<img
 									src={selectedPhoto.viewUrl}
 									alt="Inspection"
-									className="max-w-full max-h-[70vh] w-auto h-auto block shadow-2xl"
+									className="max-w-full max-h-[65vh] w-auto h-auto block shadow-2xl rounded-sm"
 									onLoad={(e) => {
 										setImageDims({
 											width: e.currentTarget.naturalWidth,
@@ -238,43 +331,28 @@ export default function AlbumViewPage() {
 									}}
 								/>
 
-								{/* Draw AI Bounding Boxes using True Percentage Math */}
-								{selectedPhoto.faceBoxes?.map((boxStr, idx) => {
-									const box = JSON.parse(boxStr);
-									return (
-										<div
-											key={idx}
-											className="absolute border-2 border-indigo-400 bg-indigo-500/10 rounded-lg shadow-[0_0_15px_rgba(129,140,248,0.5)] transition-all hover:bg-indigo-500/30"
-											style={{
-												left: `${(box.x / imageDims.width) * 100}%`,
-												top: `${(box.y / imageDims.height) * 100}%`,
-												width: `${(box.w / imageDims.width) * 100}%`,
-												height: `${(box.h / imageDims.height) * 100}%`,
-											}}
-										>
-											<span className="absolute -top-6 left-0 bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase whitespace-nowrap shadow-sm">
-												ID: {idx + 1}
-											</span>
-										</div>
-									);
-								})}
+								{/* Draw AI Bounding Boxes ONLY if showBoxes is true */}
+								{showBoxes &&
+									selectedPhoto.faceBoxes?.map((boxStr, idx) => {
+										const box = JSON.parse(boxStr);
+										return (
+											<div
+												key={idx}
+												className="absolute border-2 border-indigo-400 bg-indigo-500/10 rounded-lg shadow-[0_0_15px_rgba(129,140,248,0.5)] transition-all hover:bg-indigo-500/30"
+												style={{
+													left: `${(box.x / imageDims.width) * 100}%`,
+													top: `${(box.y / imageDims.height) * 100}%`,
+													width: `${(box.w / imageDims.width) * 100}%`,
+													height: `${(box.h / imageDims.height) * 100}%`,
+												}}
+											>
+												<span className="absolute -top-6 left-0 bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase whitespace-nowrap">
+													ID: {idx + 1}
+												</span>
+											</div>
+										);
+									})}
 							</div>
-						</div>
-
-						<div className="p-6 bg-zinc-900/50 flex justify-between items-center">
-							<span className="text-zinc-400 text-sm italic">
-								Total {selectedPhoto.faceCount || 0} signatures recorded.
-							</span>
-							<Button
-								onClick={() => {
-									setSelectedPhoto(null);
-									setImageDims({ width: 1, height: 1 });
-								}}
-								variant="secondary"
-								className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
-							>
-								Close Inspection
-							</Button>
 						</div>
 					</div>
 				</div>

@@ -137,4 +137,14 @@ public class AlbumController {
 
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/{albumId}/photos/{photoId}")
+    public ResponseEntity<?> deletePhoto(@PathVariable UUID albumId, @PathVariable UUID photoId) {
+        try {
+            photoRepository.deleteById(photoId);
+            return ResponseEntity.ok().body("Photo removed successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to delete photo");
+        }
+    }
 }
