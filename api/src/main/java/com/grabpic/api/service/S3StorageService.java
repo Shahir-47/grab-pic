@@ -2,13 +2,16 @@ package com.grabpic.api.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.time.Duration;
@@ -19,8 +22,11 @@ import java.util.UUID;
 @Service
 public class S3StorageService {
 
+    private static final Logger log = LoggerFactory.getLogger(S3StorageService.class);
+
     private final String bucketName;
     private final S3Presigner presigner;
+    private final S3Client s3Client;
 
     public S3StorageService(@Value("${aws.s3.access-key}") String accessKey,
                             @Value("${aws.s3.secret-key}") String secretKey,
@@ -28,11 +34,54 @@ public class S3StorageService {
                             @Value("${aws.s3.bucket-name}") String bucketName) {
 
         this.bucketName = bucketName;
+        StaticCredentialsProvider creds = StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(accessKey, secretKey));
+
         this.presigner = S3Presigner.builder()
                 .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)))
+                .credentialsProvider(creds)
                 .build();
+
+        this.s3Client = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(creds)
+                .build();
+    }
+
+    /**
+     * On startup, ensure the S3 bucket has a lifecycle rule that automatically
+     * aborts incomplete multipart uploads after 1 day. This prevents attackers
+     * from starting uploads and abandoning them to eat storage space.
+     */
+    @PostConstruct
+    public void ensureLifecycleRules() {
+        try {
+            AbortIncompleteMultipartUpload abortRule = AbortIncompleteMultipartUpload.builder()
+                    .daysAfterInitiation(1)
+                    .build();
+
+            LifecycleRule rule = LifecycleRule.builder()
+                    .id("abort-incomplete-multipart-uploads")
+                    .status(ExpirationStatus.ENABLED)
+                    .filter(LifecycleRuleFilter.builder().prefix("").build())
+                    .abortIncompleteMultipartUpload(abortRule)
+                    .build();
+
+            s3Client.putBucketLifecycleConfiguration(
+                    PutBucketLifecycleConfigurationRequest.builder()
+                            .bucket(bucketName)
+                            .lifecycleConfiguration(
+                                    BucketLifecycleConfiguration.builder()
+                                            .rules(rule)
+                                            .build()
+                            )
+                            .build()
+            );
+
+            log.info("S3 lifecycle rule applied: abort incomplete multipart uploads after 1 day.");
+        } catch (Exception e) {
+            log.warn("Could not apply S3 lifecycle rule (non-fatal): {}", e.getMessage());
+        }
     }
 
     public List<String> generateBatchUploadUrls(UUID albumId, int count) {
