@@ -170,5 +170,5 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
 
 if __name__ == "__main__":
     import uvicorn
-    # Start the AI Search Engine on port 5000
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    port = int(os.getenv("PORT", "5000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
