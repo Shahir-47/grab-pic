@@ -21,7 +21,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/albums")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "https://0dc0-69-142-187-136.ngrok-free.app")
 public class AlbumController {
 
     private final S3StorageService s3StorageService;
@@ -108,21 +108,139 @@ public class AlbumController {
     public ResponseEntity<List<com.grabpic.api.dto.PhotoResponse>> getAlbumPhotos(@PathVariable UUID albumId) {
 
         List<Photo> photos = photoRepository.findByAlbumId(albumId);
-
         List<com.grabpic.api.dto.PhotoResponse> response = new ArrayList<>();
 
         for (Photo photo : photos) {
             String secureViewUrl = s3StorageService.generateViewUrl(photo.getStorageUrl());
             boolean isPublic = photo.getAccessMode() == AccessMode.PUBLIC;
 
+            // Safely count faces and extract the JSON bounding boxes
+            int faceCount = 0;
+            List<String> boxes = new ArrayList<>();
+
+            if (photo.getFaces() != null) {
+                faceCount = photo.getFaces().size();
+                for (com.grabpic.api.model.PhotoEmbedding face : photo.getFaces()) {
+                    boxes.add(face.getBoxArea());
+                }
+            }
+
             response.add(new com.grabpic.api.dto.PhotoResponse(
                     photo.getId().toString(),
                     secureViewUrl,
                     isPublic,
-                    photo.isProcessed()
+                    photo.isProcessed(),
+                    faceCount,
+                    boxes
             ));
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{albumId}/photos/{photoId}")
+    public ResponseEntity<?> deletePhoto(@PathVariable UUID albumId, @PathVariable UUID photoId) {
+        try {
+            photoRepository.deleteById(photoId);
+            return ResponseEntity.ok().body("Photo removed successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to delete photo");
+        }
+    }
+
+    @DeleteMapping("/{albumId}")
+    public ResponseEntity<?> deleteAlbum(@PathVariable UUID albumId) {
+        try {
+            albumRepository.deleteById(albumId);
+            return ResponseEntity.ok().body("Album deleted successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to delete album");
+        }
+    }
+
+    @GetMapping("/{albumId}/guest/details")
+    public ResponseEntity<?> getGuestAlbumDetails(@PathVariable UUID albumId) {
+        Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+
+        if (albumOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        SharedAlbum album = albumOpt.get();
+
+        List<Photo> allPhotos = photoRepository.findByAlbumId(albumId);
+        List<com.grabpic.api.dto.PhotoResponse> publicPhotos = new ArrayList<>();
+
+        for (Photo photo : allPhotos) {
+            if (photo.getAccessMode() == AccessMode.PUBLIC) {
+                String secureViewUrl = s3StorageService.generateViewUrl(photo.getStorageUrl());
+
+                publicPhotos.add(new com.grabpic.api.dto.PhotoResponse(
+                        photo.getId().toString(),
+                        secureViewUrl,
+                        true,
+                        photo.isProcessed(),
+                        0,
+                        new ArrayList<>()
+                ));
+            }
+        }
+
+        return ResponseEntity.ok().body(
+                java.util.Map.of(
+                        "title", album.getTitle(),
+                        "publicPhotos", publicPhotos
+                )
+        );
+    }
+
+    @PutMapping("/{albumId}/photos/{photoId}/privacy")
+    public ResponseEntity<?> togglePhotoPrivacy(@PathVariable UUID albumId, @PathVariable UUID photoId, @RequestParam boolean makePublic) {
+        try {
+            Optional<Photo> photoOpt = photoRepository.findById(photoId);
+            if (photoOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Photo photo = photoOpt.get();
+            if (!photo.getAlbum().getId().equals(albumId)) {
+                return ResponseEntity.badRequest().body("Photo does not belong to this album");
+            }
+
+            photo.setAccessMode(makePublic ? AccessMode.PUBLIC : AccessMode.PROTECTED);
+            photoRepository.save(photo);
+
+            return ResponseEntity.ok().body("Privacy updated.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to update privacy");
+        }
+    }
+
+    @PostMapping("/{albumId}/guest/search-results")
+    public ResponseEntity<?> getGuestSearchResults(@PathVariable UUID albumId, @RequestBody List<UUID> photoIds) {
+        Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+        if (albumOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Photo> allPhotos = photoRepository.findAllById(photoIds);
+        List<com.grabpic.api.dto.PhotoResponse> matchedPhotos = new ArrayList<>();
+
+        for (Photo photo : allPhotos) {
+            // Verify the photo actually belongs to this album to prevent cross-album snooping
+            if (photo.getAlbum().getId().equals(albumId)) {
+                String secureViewUrl = s3StorageService.generateViewUrl(photo.getStorageUrl());
+
+                matchedPhotos.add(new com.grabpic.api.dto.PhotoResponse(
+                        photo.getId().toString(),
+                        secureViewUrl,
+                        photo.getAccessMode() == AccessMode.PUBLIC,
+                        photo.isProcessed(),
+                        0, // Hide face coordinates from guests
+                        new ArrayList<>()
+                ));
+            }
+        }
+        return ResponseEntity.ok(matchedPhotos);
     }
 }

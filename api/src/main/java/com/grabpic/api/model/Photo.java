@@ -3,6 +3,8 @@ package com.grabpic.api.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.UUID;
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Entity
@@ -25,4 +27,8 @@ public class Photo {
     private AccessMode accessMode = AccessMode.PROTECTED;
 
     private boolean processed = false;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "photo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PhotoEmbedding> faces;
 }
