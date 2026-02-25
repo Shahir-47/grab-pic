@@ -276,7 +276,7 @@ export default function GuestWelcomePage() {
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row">
 			{/* LEFT SIDEBAR: The Scanner */}
-			<div className="w-full lg:w-112.5 shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col items-center justify-center p-8 lg:p-10 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+			<div className="w-full lg:w-112.5 shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col items-center justify-center p-8 lg:p-10 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
 				<div className="w-full max-w-sm space-y-8 text-center">
 					<div>
 						<div className="w-16 h-16 bg-violet-100 dark:bg-violet-900 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -403,7 +403,7 @@ export default function GuestWelcomePage() {
 			</div>
 
 			{/* RIGHT MAIN AREA: Dynamic Galleries */}
-			<div className="flex-1 p-6 lg:p-12 overflow-y-auto bg-zinc-50 dark:bg-zinc-950">
+			<div className="flex-1 px-6 py-6 lg:px-12 lg:py-7 overflow-y-auto bg-zinc-50 dark:bg-zinc-950">
 				<div className="max-w-6xl mx-auto space-y-12">
 					{/* --- AI MATCHED PHOTOS --- */}
 					{matchedPhotos.length > 0 && (
@@ -540,7 +540,7 @@ export default function GuestWelcomePage() {
 
 					{/* --- PUBLIC ALBUM GALLERY --- */}
 					<div className="space-y-6">
-						<div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+						<div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-7">
 							<div className="flex items-center gap-3">
 								<Images className="w-6 h-6 text-zinc-400" />
 								<h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
