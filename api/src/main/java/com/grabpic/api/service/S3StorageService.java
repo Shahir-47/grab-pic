@@ -5,8 +5,6 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -28,9 +26,7 @@ public class S3StorageService {
     private final S3Presigner presigner;
     private final S3Client s3Client;
 
-    public S3StorageService(@Value("${aws.s3.access-key}") String accessKey,
-                            @Value("${aws.s3.secret-key}") String secretKey,
-                            @Value("${aws.s3.region}") String region,
+    public S3StorageService(@Value("${aws.s3.region}") String region,
                             @Value("${aws.s3.bucket-name}") String bucketName) {
 
         this.bucketName = bucketName;

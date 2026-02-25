@@ -14,10 +14,7 @@ public class SqsService {
     private final SqsClient sqsClient;
     private final String queueUrl;
 
-    public SqsService(@Value("${aws.s3.access-key}") String accessKey,
-                      @Value("${aws.s3.secret-key}") String secretKey,
-                      @Value("${aws.s3.region}") String region,
-                      @Value("${aws.sqs.queue-url}") String queueUrl) {
+    public SqsService(@Value("${aws.s3.region}") String region, @Value("${aws.sqs.queue-url}") String queueUrl) {
         this.queueUrl = queueUrl;
 
         this.sqsClient = SqsClient.builder()
