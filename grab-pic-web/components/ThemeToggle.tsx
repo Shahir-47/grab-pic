@@ -1,28 +1,35 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useCallback } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Always return true on client, false during SSR
-const subscribe = () => () => {};
-const getSnapshot = () => true;
-const getServerSnapshot = () => false;
+// Track theme changes via a simple pub/sub so useSyncExternalStore re-renders
+let listeners: (() => void)[] = [];
+function emitChange() {
+	for (const l of listeners) l();
+}
 
-function getIsDark() {
+function subscribe(listener: () => void) {
+	listeners = [...listeners, listener];
+	return () => {
+		listeners = listeners.filter((l) => l !== listener);
+	};
+}
+
+function getSnapshot() {
 	if (typeof document === "undefined") return false;
 	return document.documentElement.classList.contains("dark");
 }
 
-export default function ThemeToggle() {
-	const mounted = useSyncExternalStore(
-		subscribe,
-		getSnapshot,
-		getServerSnapshot,
-	);
-	const dark = getIsDark();
+function getServerSnapshot() {
+	return false;
+}
 
-	const toggle = () => {
+export default function ThemeToggle() {
+	const dark = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+	const toggle = useCallback(() => {
 		const next = !document.documentElement.classList.contains("dark");
 		if (next) {
 			document.documentElement.classList.add("dark");
@@ -31,9 +38,8 @@ export default function ThemeToggle() {
 			document.documentElement.classList.remove("dark");
 			localStorage.setItem("theme", "light");
 		}
-	};
-
-	if (!mounted) return null;
+		emitChange();
+	}, []);
 
 	return (
 		<Button
