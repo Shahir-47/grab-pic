@@ -167,8 +167,30 @@ public class AlbumController {
         }
 
         SharedAlbum album = albumOpt.get();
+
+        List<Photo> allPhotos = photoRepository.findByAlbumId(albumId);
+        List<com.grabpic.api.dto.PhotoResponse> publicPhotos = new ArrayList<>();
+
+        for (Photo photo : allPhotos) {
+            if (photo.getAccessMode() == AccessMode.PUBLIC) {
+                String secureViewUrl = s3StorageService.generateViewUrl(photo.getStorageUrl());
+
+                publicPhotos.add(new com.grabpic.api.dto.PhotoResponse(
+                        photo.getId().toString(),
+                        secureViewUrl,
+                        true,
+                        photo.isProcessed(),
+                        0,
+                        new ArrayList<>()
+                ));
+            }
+        }
+
         return ResponseEntity.ok().body(
-                java.util.Map.of("title", album.getTitle())
+                java.util.Map.of(
+                        "title", album.getTitle(),
+                        "publicPhotos", publicPhotos
+                )
         );
     }
 
