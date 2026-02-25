@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 import {
 	UploadCloud,
 	Lock,
@@ -13,6 +14,7 @@ import {
 	CheckCircle2,
 	Image as ImageIcon,
 	AlertCircle,
+	Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import { apiFetch } from "@/lib/api";
@@ -26,6 +28,7 @@ interface UploadPhoto {
 }
 
 export default function AlbumUploadPage() {
+	const { isLoading: isAuthLoading, isAuthenticated } = useRequireAuth();
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const albumId = params?.id || "unknown-album";
@@ -34,6 +37,14 @@ export default function AlbumUploadPage() {
 	const [isUploading, setIsUploading] = useState(false);
 	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	if (isAuthLoading || !isAuthenticated) {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+				<Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+			</div>
+		);
+	}
 
 	//  Load files into browser memory and create preview URLs
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

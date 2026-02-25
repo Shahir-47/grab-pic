@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
+import { useRedirectIfAuth } from "@/lib/useRequireAuth";
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
+	const { isLoading: isAuthChecking, isAuthenticated } = useRedirectIfAuth();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -55,6 +57,14 @@ export default function SignUpPage() {
 			});
 		}
 	};
+
+	if (isAuthChecking || isAuthenticated) {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+				<Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+			</div>
+		);
+	}
 
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">

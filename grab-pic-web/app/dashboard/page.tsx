@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 import {
 	Image as ImageIcon,
 	Loader2,
@@ -20,6 +21,7 @@ interface Album {
 }
 
 export default function DashboardPage() {
+	const { isLoading: isAuthLoading, isAuthenticated } = useRequireAuth();
 	const router = useRouter();
 	const [albums, setAlbums] = useState<Album[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +73,14 @@ export default function DashboardPage() {
 			setIsCreating(false);
 		}
 	};
+
+	if (isAuthLoading || !isAuthenticated) {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+				<Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+			</div>
+		);
+	}
 
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">

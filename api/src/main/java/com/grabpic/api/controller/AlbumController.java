@@ -39,7 +39,7 @@ public class AlbumController {
     }
 
     @PostMapping
-    public ResponseEntity<SharedAlbum> createAlbum(
+    public ResponseEntity<com.grabpic.api.dto.AlbumResponse> createAlbum(
             @RequestBody com.grabpic.api.dto.AlbumCreateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
@@ -49,13 +49,25 @@ public class AlbumController {
         album.setHostId(jwt.getSubject());
 
         SharedAlbum savedAlbum = albumRepository.save(album);
-        return ResponseEntity.ok(savedAlbum);
+        return ResponseEntity.ok(new com.grabpic.api.dto.AlbumResponse(
+                savedAlbum.getId().toString(),
+                savedAlbum.getTitle(),
+                savedAlbum.getCreatedAt().toString()
+        ));
     }
 
     @GetMapping
-    public ResponseEntity<List<SharedAlbum>> getAllAlbums(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<List<com.grabpic.api.dto.AlbumResponse>> getAllAlbums(@AuthenticationPrincipal Jwt jwt) {
         String hostId = jwt.getSubject();
-        return ResponseEntity.ok(albumRepository.findByHostId(hostId));
+        List<SharedAlbum> albums = albumRepository.findByHostId(hostId);
+        List<com.grabpic.api.dto.AlbumResponse> response = albums.stream()
+                .map(a -> new com.grabpic.api.dto.AlbumResponse(
+                        a.getId().toString(),
+                        a.getTitle(),
+                        a.getCreatedAt().toString()
+                ))
+                .toList();
+        return ResponseEntity.ok(response);
     }
     
     @GetMapping("/{albumId}/upload-urls")
@@ -265,6 +277,13 @@ public class AlbumController {
 
     @PostMapping("/{albumId}/guest/search-results")
     public ResponseEntity<?> getGuestSearchResults(@PathVariable UUID albumId, @RequestBody List<UUID> photoIds) {
+        if (photoIds == null || photoIds.isEmpty()) {
+            return ResponseEntity.badRequest().body("No photo IDs provided.");
+        }
+        if (photoIds.size() > 100) {
+            return ResponseEntity.badRequest().body("Too many photo IDs. Maximum is 100.");
+        }
+
         Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
         if (albumOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
