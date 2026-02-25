@@ -42,6 +42,19 @@ def process_message(message):
     storage_url = body['storageUrl']
     
     print(f"\n[+] Processing Photo ID: {photo_id}")
+
+    # --- Check if the photo still exists in the DB ---
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM photos WHERE id = %s", (photo_id,))
+    if cur.fetchone() is None:
+        print(f"    -> Skipping: Photo {photo_id} no longer exists in database.")
+        cur.close()
+        conn.close()
+        return # Exit early so we don't try to download or insert
+    
+    cur.close()
+    conn.close()
     
     # Download image from S3 to a temporary file
     local_path = f"temp_{photo_id}.jpg"
@@ -52,7 +65,7 @@ def process_message(message):
     try:
         faces = DeepFace.represent(
             img_path=local_path, 
-            model_name="Facenet", 
+            model_name="GhostFaceNet",
             detector_backend="retinaface",
             enforce_detection=False 
         )
@@ -70,8 +83,8 @@ def process_message(message):
     
     try:
         for face in valid_faces:
-            # convert the list of 128 numbers into a string so PostgreSQL pgvector accepts it
-            embedding_str = str(face['embedding']) 
+            # convert the list of 4096 numbers into a string so PostgreSQL pgvector accepts it
+            embedding_str = f"[{','.join(map(str, face['embedding']))}]"
             box_area_json = json.dumps(face['facial_area'])
             
             cur.execute(
