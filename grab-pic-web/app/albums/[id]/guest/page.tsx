@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, Loader2, Image as ImageIcon } from "lucide-react";
+import {
+	Camera,
+	Upload,
+	Loader2,
+	Image as ImageIcon,
+	Video,
+} from "lucide-react";
 
 export default function GuestWelcomePage() {
 	const params = useParams<{ id: string }>();
@@ -16,12 +22,24 @@ export default function GuestWelcomePage() {
 	const [selfie, setSelfie] = useState<File | null>(null);
 	const [isSearching, setIsSearching] = useState(false);
 
+	const [isMobile, setIsMobile] = useState(true);
+	const [isCameraOpen, setIsCameraOpen] = useState(false);
+	const videoRef = useRef<HTMLVideoElement>(null);
+	const streamRef = useRef<MediaStream | null>(null);
+
+	// Check if the user is on a mobile device on load
+	useEffect(() => {
+		const userAgent =
+			typeof window.navigator === "undefined" ? "" : navigator.userAgent;
+		const mobileRegex =
+			/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+		setIsMobile(mobileRegex.test(userAgent));
+	}, []);
+
 	useEffect(() => {
 		const fetchAlbumDetails = async () => {
 			try {
-				const res = await fetch(
-					`http://localhost:8080/api/albums/${albumId}/guest/details`,
-				);
+				const res = await fetch(`/api/albums/${albumId}/guest/details`);
 
 				if (!res.ok) throw new Error("Album not found or private");
 
@@ -33,11 +51,72 @@ export default function GuestWelcomePage() {
 				setIsLoading(false);
 			}
 		};
-
 		if (albumId) fetchAlbumDetails();
 	}, [albumId]);
 
-	const handleSelfieSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+	useEffect(() => {
+		if (isCameraOpen && videoRef.current && streamRef.current) {
+			videoRef.current.srcObject = streamRef.current;
+		}
+	}, [isCameraOpen]);
+
+	const stopCamera = useCallback(() => {
+		if (streamRef.current) {
+			streamRef.current.getTracks().forEach((track) => track.stop());
+			streamRef.current = null;
+		}
+		setIsCameraOpen(false);
+	}, []);
+
+	// Clean up camera on unmount
+	useEffect(() => {
+		return () => stopCamera();
+	}, [stopCamera]);
+
+	const startDesktopCamera = async () => {
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({
+				video: true,
+				audio: false,
+			});
+			streamRef.current = stream;
+			setIsCameraOpen(true);
+		} catch (err) {
+			console.error("Error accessing camera:", err);
+			alert(
+				"Could not access camera. Please check your permissions or upload a file instead.",
+			);
+		}
+	};
+
+	const takeDesktopPhoto = () => {
+		if (!videoRef.current) return;
+
+		const canvas = document.createElement("canvas");
+		canvas.width = videoRef.current.videoWidth;
+		canvas.height = videoRef.current.videoHeight;
+		const ctx = canvas.getContext("2d");
+
+		if (ctx) {
+			// Draw the current video frame onto the canvas
+			ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+			// Convert the canvas to a JPEG Blob, then to a File object
+			canvas.toBlob(
+				(blob) => {
+					if (blob) {
+						const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+						setSelfie(file);
+						stopCamera();
+					}
+				},
+				"image/jpeg",
+				0.9,
+			);
+		}
+	};
+
+	const handleMobileSelfieSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files && e.target.files[0]) {
 			setSelfie(e.target.files[0]);
 		}
@@ -46,12 +125,6 @@ export default function GuestWelcomePage() {
 	const handleSearch = async () => {
 		if (!selfie) return;
 		setIsSearching(true);
-
-		// --- NEXT STEP LOGIC GOES HERE ---
-		// 1. Upload this selfie to a temporary bucket
-		// 2. Extract the 128-D face embedding
-		// 3. PostgreSQL vector search (Cosine Distance)
-		// 4. Show the matching photos!
 
 		setTimeout(() => {
 			alert("Ready to build the AI Search Engine backend!");
@@ -98,26 +171,32 @@ export default function GuestWelcomePage() {
 					</p>
 				</div>
 
-				{/* Selfie Upload Area */}
+				{/* Camera / Upload Area */}
 				<div className="space-y-4">
-					{!selfie ? (
-						<div className="relative group cursor-pointer">
-							<input
-								type="file"
-								accept="image/*"
-								// MAGIC TRICK: "capture=user" forces mobile devices to instantly open the front-facing selfie camera!
-								capture="user"
-								onChange={handleSelfieSelect}
-								className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-							/>
-							<div className="border-2 border-dashed border-indigo-200 dark:border-indigo-800/50 rounded-2xl p-8 bg-indigo-50/50 dark:bg-indigo-900/10 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20 transition-colors flex flex-col items-center justify-center gap-3">
-								<Upload className="w-6 h-6 text-indigo-500" />
-								<span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-									Tap to take a selfie
-								</span>
+					{isCameraOpen && !selfie ? (
+						<div className="space-y-4">
+							<div className="relative w-48 h-48 mx-auto rounded-full overflow-hidden border-4 border-indigo-100 dark:border-indigo-900 shadow-lg bg-black">
+								<video
+									ref={videoRef}
+									autoPlay
+									playsInline
+									muted
+									className="w-full h-full object-cover transform scale-x-[-1]"
+								/>
+							</div>
+							<div className="flex gap-2 justify-center">
+								<Button onClick={stopCamera} variant="outline" size="sm">
+									Cancel
+								</Button>
+								<Button
+									onClick={takeDesktopPhoto}
+									className="bg-indigo-600 hover:bg-indigo-700"
+								>
+									Snap Photo
+								</Button>
 							</div>
 						</div>
-					) : (
+					) : selfie ? (
 						<div className="space-y-4">
 							<div className="relative w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-indigo-100 dark:border-indigo-900 shadow-lg">
 								<img
@@ -129,11 +208,44 @@ export default function GuestWelcomePage() {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => setSelfie(null)}
+								onClick={() => {
+									setSelfie(null);
+									if (!isMobile) startDesktopCamera();
+								}}
 								className="text-xs"
 							>
 								Retake Selfie
 							</Button>
+						</div>
+					) : (
+						<div className="relative group cursor-pointer">
+							{isMobile ? (
+								/* Mobile Input Overlay */
+								<input
+									type="file"
+									accept="image/*"
+									capture="user"
+									onChange={handleMobileSelfieSelect}
+									className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+								/>
+							) : (
+								/* Desktop Click Handler */
+								<div
+									onClick={startDesktopCamera}
+									className="absolute inset-0 w-full h-full cursor-pointer z-10"
+								/>
+							)}
+
+							<div className="border-2 border-dashed border-indigo-200 dark:border-indigo-800/50 rounded-2xl p-8 bg-indigo-50/50 dark:bg-indigo-900/10 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20 transition-colors flex flex-col items-center justify-center gap-3">
+								{isMobile ? (
+									<Upload className="w-6 h-6 text-indigo-500" />
+								) : (
+									<Video className="w-6 h-6 text-indigo-500" />
+								)}
+								<span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+									{isMobile ? "Tap to open camera" : "Click to take a selfie"}
+								</span>
+							</div>
 						</div>
 					)}
 				</div>

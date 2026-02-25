@@ -21,7 +21,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/albums")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "https://0dc0-69-142-187-136.ngrok-free.app")
 public class AlbumController {
 
     private final S3StorageService s3StorageService;
