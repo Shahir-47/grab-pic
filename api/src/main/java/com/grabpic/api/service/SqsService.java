@@ -22,8 +22,6 @@ public class SqsService {
 
         this.sqsClient = SqsClient.builder()
                 .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)))
                 .build();
     }
 

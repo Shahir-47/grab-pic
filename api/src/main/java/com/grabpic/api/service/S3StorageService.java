@@ -34,17 +34,13 @@ public class S3StorageService {
                             @Value("${aws.s3.bucket-name}") String bucketName) {
 
         this.bucketName = bucketName;
-        StaticCredentialsProvider creds = StaticCredentialsProvider.create(
-                AwsBasicCredentials.create(accessKey, secretKey));
 
         this.presigner = S3Presigner.builder()
                 .region(Region.of(region))
-                .credentialsProvider(creds)
                 .build();
 
         this.s3Client = S3Client.builder()
                 .region(Region.of(region))
-                .credentialsProvider(creds)
                 .build();
     }
 
