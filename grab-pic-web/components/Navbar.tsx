@@ -7,6 +7,7 @@ import { LogOut, LayoutDashboard, LogIn, Menu, X, Home } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import GrabPicLogo from "@/components/GrabPicLogo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Navbar() {
 	const router = useRouter();
@@ -111,6 +112,9 @@ export default function Navbar() {
 								<LogOut className="w-4 h-4 mr-1.5" />
 								Logout
 							</Button>
+
+							<div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
+							<ThemeToggle />
 						</>
 					) : (
 						<>
@@ -140,6 +144,9 @@ export default function Navbar() {
 							>
 								Get Started
 							</Button>
+
+							<div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
+							<ThemeToggle />
 						</>
 					)}
 				</div>
@@ -192,6 +199,11 @@ export default function Navbar() {
 								<LogOut className="w-4 h-4" />
 								Logout
 							</button>
+
+							<div className="border-t border-zinc-200 dark:border-zinc-800 pt-2 mt-1 flex items-center justify-between px-3">
+								<span className="text-xs text-zinc-400">Appearance</span>
+								<ThemeToggle />
+							</div>
 						</>
 					) : (
 						<>
@@ -216,6 +228,11 @@ export default function Navbar() {
 							>
 								Get Started
 							</Button>
+
+							<div className="border-t border-zinc-200 dark:border-zinc-800 pt-2 mt-1 flex items-center justify-between px-3">
+								<span className="text-xs text-zinc-400">Appearance</span>
+								<ThemeToggle />
+							</div>
 						</>
 					)}
 				</div>

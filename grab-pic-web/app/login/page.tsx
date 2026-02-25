@@ -82,7 +82,7 @@ function LoginContent() {
 					<Button
 						variant="outline"
 						onClick={() => handleOAuth("google")}
-						className="rounded-xl border-zinc-200"
+						className="rounded-xl border-zinc-200 dark:border-zinc-700"
 					>
 						<svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
 							<path
@@ -107,7 +107,7 @@ function LoginContent() {
 					<Button
 						variant="outline"
 						onClick={() => handleOAuth("github")}
-						className="rounded-xl border-zinc-200"
+						className="rounded-xl border-zinc-200 dark:border-zinc-700"
 					>
 						<svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
 							<path
@@ -145,15 +145,7 @@ function LoginContent() {
 						/>
 					</div>
 					<div className="space-y-2">
-						<div className="flex items-center justify-between">
-							<Label htmlFor="password">Password</Label>
-							<Link
-								href="/forgot-password"
-								className="text-xs text-zinc-500 hover:underline"
-							>
-								Forgot password?
-							</Link>
-						</div>
+						<Label htmlFor="password">Password</Label>
 						<Input
 							id="password"
 							type="password"
@@ -166,7 +158,7 @@ function LoginContent() {
 
 					{message && (
 						<div
-							className={`text-sm p-3 rounded-xl border ${message.type === "error" ? "bg-red-50 text-red-600 border-red-200" : "bg-green-50 text-green-600 border-green-200"}`}
+							className={`text-sm p-3 rounded-xl border ${message.type === "error" ? "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800" : "bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"}`}
 						>
 							{message.text}
 						</div>

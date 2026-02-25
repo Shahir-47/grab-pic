@@ -20,6 +20,7 @@ import {
 	Check,
 	Copy,
 	SquareCheckBig,
+	ArrowLeft,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -127,8 +128,10 @@ export default function AlbumViewPage() {
 
 	const handleDeleteSelected = async () => {
 		if (selectedPhotoIds.length === 0) return;
+		const count = selectedPhotoIds.length;
+		const photoWord = count === 1 ? "photo" : "photos";
 		const confirmDelete = window.confirm(
-			`Are you sure you want to delete ${selectedPhotoIds.length} photos?`,
+			`Permanently delete ${count} ${photoWord}?\n\nThis cannot be undone.`,
 		);
 		if (!confirmDelete) return;
 
@@ -194,12 +197,12 @@ export default function AlbumViewPage() {
 	const handleTogglePrivacySelected = async (makePublic: boolean) => {
 		if (selectedPhotoIds.length === 0) return;
 
-		const action = makePublic
-			? "publish (make public)"
-			: "protect (make private)";
-		const confirmToggle = window.confirm(
-			`Are you sure you want to ${action} ${selectedPhotoIds.length} photos?`,
-		);
+		const count = selectedPhotoIds.length;
+		const photoWord = count === 1 ? "photo" : "photos";
+		const message = makePublic
+			? `Make ${count} ${photoWord} public?\n\nPublic photos are visible to anyone with the album link.`
+			: `Make ${count} ${photoWord} protected?\n\nProtected photos are only shown to the people in them, matched by facial recognition.`;
+		const confirmToggle = window.confirm(message);
 		if (!confirmToggle) return;
 
 		try {
@@ -305,18 +308,27 @@ export default function AlbumViewPage() {
 
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">
-			<div className="max-w-7xl mx-auto space-y-8">
+			<div className="max-w-7xl mx-auto space-y-6">
+				{/* Back link — standalone with proper spacing */}
+				<button
+					onClick={() => router.push("/dashboard")}
+					className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
+				>
+					<ArrowLeft className="w-4 h-4" />
+					Back to Dashboard
+				</button>
+
 				{/* Header Controls */}
 				<div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-					{/* Top row: title + normal buttons */}
+					{/* Top row: title + action buttons */}
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6">
 						<div>
 							<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
 								Album Gallery
 							</h1>
 							<p className="text-zinc-500 mt-1">
-								You are viewing as the Host. You can see all {photos.length}{" "}
-								photos.
+								Viewing as Host · {photos.length}{" "}
+								{photos.length === 1 ? "photo" : "photos"}
 							</p>
 						</div>
 
@@ -344,7 +356,7 @@ export default function AlbumViewPage() {
 								<Button
 									onClick={handleDeleteAlbum}
 									variant="outline"
-									className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 px-3"
+									className="border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-300 px-3"
 									title="Delete Entire Album"
 								>
 									<Trash2 className="w-4 h-4" />
@@ -353,11 +365,12 @@ export default function AlbumViewPage() {
 						)}
 					</div>
 
-					{/* Selection toolbar — separate bar that appears below, no cramming */}
+					{/* Selection toolbar */}
 					{isSelectionMode && (
-						<div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 px-6 py-4 space-y-3">
-							{/* Row 1: Selection info + select/deselect */}
-							<div className="flex items-center justify-between flex-wrap gap-2">
+						<div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 px-6 py-4">
+							{/* Single row on desktop, stacks cleanly on mobile */}
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+								{/* Left: count + select all */}
 								<div className="flex items-center gap-3">
 									<span className="text-sm font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900 px-3 py-1 rounded-full">
 										{selectedPhotoIds.length} selected
@@ -369,6 +382,52 @@ export default function AlbumViewPage() {
 											: "Select All"}
 									</Button>
 								</div>
+
+								{/* Center: action buttons */}
+								<div className="flex items-center gap-2 flex-wrap">
+									<Button
+										onClick={handleDownloadSelectedZip}
+										variant="outline"
+										size="sm"
+										disabled={selectedPhotoIds.length === 0 || isDownloadingZip}
+									>
+										{isDownloadingZip ? (
+											<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+										) : (
+											<Download className="w-4 h-4 mr-2" />
+										)}
+										{isDownloadingZip ? "Zipping..." : "Download"}
+									</Button>
+									<Button
+										onClick={() => handleTogglePrivacySelected(true)}
+										variant="outline"
+										size="sm"
+										disabled={selectedPhotoIds.length === 0}
+										title="Visible to anyone with the album link"
+									>
+										<Globe className="w-4 h-4 mr-2" /> Make Public
+									</Button>
+									<Button
+										onClick={() => handleTogglePrivacySelected(false)}
+										variant="outline"
+										size="sm"
+										disabled={selectedPhotoIds.length === 0}
+										title="Only shown to matched faces via facial recognition"
+									>
+										<Lock className="w-4 h-4 mr-2" /> Make Protected
+									</Button>
+									<Button
+										onClick={handleDeleteSelected}
+										variant="outline"
+										size="sm"
+										disabled={selectedPhotoIds.length === 0}
+										className="border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-300"
+									>
+										<Trash2 className="w-4 h-4 mr-2" /> Delete
+									</Button>
+								</div>
+
+								{/* Right: cancel */}
 								<Button
 									onClick={() => {
 										setIsSelectionMode(false);
@@ -376,54 +435,9 @@ export default function AlbumViewPage() {
 									}}
 									variant="ghost"
 									size="sm"
-									className="text-zinc-500 hover:text-zinc-700"
+									className="text-zinc-500 hover:text-zinc-700 shrink-0"
 								>
-									<X className="w-4 h-4 mr-1.5" /> Cancel
-								</Button>
-							</div>
-
-							{/* Row 2: Actions — grouped and spaced */}
-							<div className="flex flex-wrap gap-2">
-								<Button
-									onClick={handleDownloadSelectedZip}
-									variant="outline"
-									size="sm"
-									disabled={selectedPhotoIds.length === 0 || isDownloadingZip}
-									className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-								>
-									{isDownloadingZip ? (
-										<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-									) : (
-										<Download className="w-4 h-4 mr-2" />
-									)}
-									{isDownloadingZip ? "Zipping..." : "Download Zip"}
-								</Button>
-								<Button
-									onClick={() => handleTogglePrivacySelected(true)}
-									variant="outline"
-									size="sm"
-									disabled={selectedPhotoIds.length === 0}
-									className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
-								>
-									<Globe className="w-4 h-4 mr-2" /> Make Public
-								</Button>
-								<Button
-									onClick={() => handleTogglePrivacySelected(false)}
-									variant="outline"
-									size="sm"
-									disabled={selectedPhotoIds.length === 0}
-									className="border-amber-200 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-								>
-									<Lock className="w-4 h-4 mr-2" /> Make Private
-								</Button>
-								<Button
-									onClick={handleDeleteSelected}
-									variant="destructive"
-									size="sm"
-									disabled={selectedPhotoIds.length === 0}
-									className="bg-red-600 hover:bg-red-700 text-white"
-								>
-									<Trash2 className="w-4 h-4 mr-2" /> Delete
+									<X className="w-4 h-4 mr-1.5" /> Done
 								</Button>
 							</div>
 						</div>
@@ -596,8 +610,8 @@ export default function AlbumViewPage() {
 																				}`}
 									title={
 										selectedPhoto.isPublic
-											? "Currently Public. Click to make Private."
-											: "Currently Private. Click to make Public."
+											? "Currently Public (visible to anyone with the link). Click to protect."
+											: "Currently Protected (only shown to matched faces). Click to make public."
 									}
 								>
 									{selectedPhoto.isPublic ? (
@@ -606,7 +620,7 @@ export default function AlbumViewPage() {
 										</>
 									) : (
 										<>
-											<Lock className="w-4 h-4 mr-2" /> Private
+											<Lock className="w-4 h-4 mr-2" /> Protected
 										</>
 									)}
 								</Button>

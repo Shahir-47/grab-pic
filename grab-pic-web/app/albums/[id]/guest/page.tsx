@@ -286,8 +286,8 @@ export default function GuestWelcomePage() {
 							{albumTitle}
 						</h1>
 						<p className="text-zinc-500 mt-3 text-sm leading-relaxed">
-							Browse the public gallery below, or take a selfie to find the
-							photos you&apos;re in.
+							Browse the public gallery below, or take a selfie to find
+							protected photos that match your face.
 						</p>
 					</div>
 
@@ -560,8 +560,8 @@ export default function GuestWelcomePage() {
 									No public photos yet
 								</h3>
 								<p className="text-zinc-500 text-sm max-w-xs mx-auto">
-									The host hasn&apos;t made any photos public. Take a selfie to
-									find your private photos!
+									The host hasn&apos;t shared any photos publicly yet. Take a
+									selfie above to find protected photos that match your face!
 								</p>
 							</div>
 						) : (

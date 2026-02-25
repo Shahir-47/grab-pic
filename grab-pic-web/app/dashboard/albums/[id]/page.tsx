@@ -15,6 +15,8 @@ import {
 	Image as ImageIcon,
 	AlertCircle,
 	Loader2,
+	ArrowLeft,
+	Eye,
 } from "lucide-react";
 import Image from "next/image";
 import { apiFetch } from "@/lib/api";
@@ -173,33 +175,51 @@ export default function AlbumUploadPage() {
 
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">
-			<div className="max-w-6xl mx-auto space-y-8">
+			<div className="max-w-6xl mx-auto space-y-6">
+				{/* Back link — standalone */}
+				<button
+					onClick={() => router.push("/dashboard")}
+					className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
+				>
+					<ArrowLeft className="w-4 h-4" />
+					Back to Dashboard
+				</button>
+
 				{/* Header & Privacy Explanation */}
 				<div className="space-y-4">
-					<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-						Add Photos to Album
-					</h1>
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+						<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+							Add Photos to Album
+						</h1>
+						<Button
+							variant="outline"
+							onClick={() => router.push(`/dashboard/albums/${albumId}/view`)}
+							className="w-full sm:w-auto"
+						>
+							<Eye className="w-4 h-4 mr-2" />
+							View Album
+						</Button>
+					</div>
 
 					<div className="bg-violet-50 dark:bg-violet-950 border border-violet-100 dark:border-violet-900 rounded-2xl p-6 flex gap-4 items-start">
 						<Info className="w-6 h-6 text-violet-600 mt-1 shrink-0" />
 						<div className="space-y-2 text-sm text-violet-900 dark:text-violet-200">
 							<h3 className="font-bold text-base">How Album Privacy Works</h3>
 							<p>
-								For your guests&apos; privacy, all uploaded photos are{" "}
 								<strong className="text-zinc-900 dark:text-white">
 									<Lock className="w-3 h-3 inline pb-0.5" /> Protected
 								</strong>{" "}
-								by default. GrabPic&apos;s AI will scan these and ONLY show them
-								to the specific people found in the picture.
+								(default) &mdash; These photos are only shown to the specific
+								people in them, matched by facial recognition. Guests take a
+								selfie and only see photos that match their face.
 							</p>
 							<p>
-								If you have landscape shots, venue pictures, or massive group
-								photos you want <em>everyone</em> with the album link to see,
-								simply mark them as{" "}
 								<strong className="text-emerald-600 dark:text-emerald-400">
 									<Globe className="w-3 h-3 inline pb-0.5" /> Public
-								</strong>
-								.
+								</strong>{" "}
+								&mdash; Visible to anyone who has the album link. Great for
+								landscape shots, venue pictures, or group photos you want
+								everyone to see.
 							</p>
 						</div>
 					</div>
@@ -219,7 +239,7 @@ export default function AlbumUploadPage() {
 						<Button
 							onClick={() => fileInputRef.current?.click()}
 							variant="outline"
-							className="w-full sm:w-auto border-zinc-300"
+							className="w-full sm:w-auto border-zinc-300 dark:border-zinc-700"
 						>
 							<UploadCloud className="w-4 h-4 mr-2" />
 							Select Photos

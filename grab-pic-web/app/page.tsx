@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 import {
 	Shield,
 	Share2,
-	Loader2,
 	ScanFace,
 	Download,
 	Upload,
@@ -16,35 +15,33 @@ import {
 	Globe,
 	ArrowRight,
 	CheckCircle2,
+	LayoutDashboard,
+	Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GrabPicLogo from "@/components/GrabPicLogo";
 
 export default function Home() {
 	const router = useRouter();
-	const [isChecking, setIsChecking] = useState(true);
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
 
 	useEffect(() => {
 		const check = async () => {
 			const {
 				data: { session },
 			} = await supabase.auth.getSession();
-			if (session) {
-				router.replace("/dashboard");
-			} else {
-				setIsChecking(false);
-			}
+			setIsLoggedIn(!!session);
 		};
 		check();
-	}, [router]);
 
-	if (isChecking) {
-		return (
-			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-				<Loader2 className="w-10 h-10 animate-spin text-violet-600" />
-			</div>
-		);
-	}
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange((_event, session) => {
+			setIsLoggedIn(!!session);
+		});
+
+		return () => subscription.unsubscribe();
+	}, []);
 
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
@@ -67,20 +64,42 @@ export default function Home() {
 				</div>
 
 				<div className="flex flex-col sm:flex-row gap-3 pt-2">
-					<Button
-						onClick={() => router.push("/signup")}
-						className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-base font-bold shadow-lg"
-					>
-						Get Started Free
-						<ArrowRight className="w-4 h-4 ml-2" />
-					</Button>
-					<Button
-						variant="outline"
-						onClick={() => router.push("/login")}
-						className="px-8 py-6 text-base font-bold border-zinc-300 dark:border-zinc-700"
-					>
-						Sign In
-					</Button>
+					{isLoggedIn ? (
+						<>
+							<Button
+								onClick={() => router.push("/dashboard")}
+								className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-base font-bold shadow-lg"
+							>
+								<LayoutDashboard className="w-4 h-4 mr-2" />
+								Go to Dashboard
+							</Button>
+							<Button
+								variant="outline"
+								onClick={() => router.push("/dashboard")}
+								className="px-8 py-6 text-base font-bold border-zinc-300 dark:border-zinc-700"
+							>
+								<Plus className="w-4 h-4 mr-2" />
+								Create an Album
+							</Button>
+						</>
+					) : (
+						<>
+							<Button
+								onClick={() => router.push("/signup")}
+								className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-base font-bold shadow-lg"
+							>
+								Get Started Free
+								<ArrowRight className="w-4 h-4 ml-2" />
+							</Button>
+							<Button
+								variant="outline"
+								onClick={() => router.push("/login")}
+								className="px-8 py-6 text-base font-bold border-zinc-300 dark:border-zinc-700"
+							>
+								Sign In
+							</Button>
+						</>
+					)}
 				</div>
 
 				<p className="text-xs text-zinc-400 dark:text-zinc-500">
@@ -106,7 +125,7 @@ export default function Home() {
 								step: "1",
 								icon: Upload,
 								title: "Upload your photos",
-								desc: "Drag and drop all photos from your event into an album. Set each photo as public or AI-protected.",
+								desc: "Drop all photos from your event into an album. Mark each one as public (anyone with the link) or protected (matched by face only).",
 							},
 							{
 								step: "2",
@@ -123,12 +142,16 @@ export default function Home() {
 						].map((item) => (
 							<div
 								key={item.step}
-								className="relative bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-8 text-center space-y-4"
+								className="relative bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-8 text-center space-y-5"
 							>
-								<div className="w-10 h-10 bg-violet-600 text-white rounded-full flex items-center justify-center mx-auto text-sm font-black">
-									{item.step}
+								<div className="relative w-16 h-16 mx-auto">
+									<div className="w-16 h-16 bg-violet-100 dark:bg-violet-900/40 rounded-2xl flex items-center justify-center">
+										<item.icon className="w-7 h-7 text-violet-600 dark:text-violet-400" />
+									</div>
+									<span className="absolute -top-2 -right-2 w-7 h-7 bg-violet-600 text-white rounded-full flex items-center justify-center text-xs font-black shadow-md">
+										{item.step}
+									</span>
 								</div>
-								<item.icon className="w-8 h-8 text-violet-500 mx-auto" />
 								<h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
 									{item.title}
 								</h3>
@@ -163,13 +186,13 @@ export default function Home() {
 						{
 							icon: Lock,
 							title: "Privacy by Default",
-							desc: "Every photo is protected by default. Only the people actually in a photo can see it.",
+							desc: "Every photo is protected by default. Guests take a selfie and only see photos that match their face.",
 							color: "text-emerald-500",
 						},
 						{
 							icon: Globe,
 							title: "Public & Protected Modes",
-							desc: "Mark landscape shots or group photos as Public for everyone to see. Keep candid shots AI-protected.",
+							desc: "Public photos are visible to anyone with the album link. Protected photos are only shown to the people in them, matched by facial recognition.",
 							color: "text-blue-500",
 						},
 						{
@@ -193,9 +216,11 @@ export default function Home() {
 					].map((feature) => (
 						<div
 							key={feature.title}
-							className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-3"
+							className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4"
 						>
-							<feature.icon className={`w-6 h-6 ${feature.color}`} />
+							<div className="w-11 h-11 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center">
+								<feature.icon className={`w-5 h-5 ${feature.color}`} />
+							</div>
 							<h3 className="font-bold text-zinc-900 dark:text-zinc-50">
 								{feature.title}
 							</h3>
@@ -243,17 +268,30 @@ export default function Home() {
 			{/* ── FINAL CTA ── */}
 			<section className="max-w-3xl mx-auto px-6 py-20 text-center space-y-6">
 				<h2 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-					Stop texting photos one by one
+					{isLoggedIn
+						? "Ready for your next event?"
+						: "Stop texting photos one by one"}
 				</h2>
 				<p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto">
-					Set up your first album in under a minute. Your guests will love it.
+					{isLoggedIn
+						? "Create a new album and share it with your guests in seconds."
+						: "Set up your first album in under a minute. Your guests will love it."}
 				</p>
 				<Button
-					onClick={() => router.push("/signup")}
+					onClick={() => router.push(isLoggedIn ? "/dashboard" : "/signup")}
 					className="bg-violet-600 hover:bg-violet-700 text-white px-10 py-6 text-base font-bold shadow-lg"
 				>
-					Get Started Free
-					<ArrowRight className="w-4 h-4 ml-2" />
+					{isLoggedIn ? (
+						<>
+							<Plus className="w-4 h-4 mr-2" />
+							Create an Album
+						</>
+					) : (
+						<>
+							Get Started Free
+							<ArrowRight className="w-4 h-4 ml-2" />
+						</>
+					)}
 				</Button>
 			</section>
 
