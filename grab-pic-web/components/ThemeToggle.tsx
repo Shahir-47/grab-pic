@@ -1,32 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function ThemeToggle() {
-	const [dark, setDark] = useState(false);
-	const [mounted, setMounted] = useState(false);
+// Always return true on client, false during SSR
+const subscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-	useEffect(() => {
-		setMounted(true);
-		// Check localStorage first, then system preference
-		const stored = localStorage.getItem("theme");
-		if (stored === "dark") {
-			setDark(true);
-			document.documentElement.classList.add("dark");
-		} else if (stored === "light") {
-			setDark(false);
-			document.documentElement.classList.remove("dark");
-		} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-			setDark(true);
-			document.documentElement.classList.add("dark");
-		}
-	}, []);
+function getIsDark() {
+	if (typeof document === "undefined") return false;
+	return document.documentElement.classList.contains("dark");
+}
+
+export default function ThemeToggle() {
+	const mounted = useSyncExternalStore(
+		subscribe,
+		getSnapshot,
+		getServerSnapshot,
+	);
+	const dark = getIsDark();
 
 	const toggle = () => {
-		const next = !dark;
-		setDark(next);
+		const next = !document.documentElement.classList.contains("dark");
 		if (next) {
 			document.documentElement.classList.add("dark");
 			localStorage.setItem("theme", "dark");
@@ -36,7 +33,6 @@ export default function ThemeToggle() {
 		}
 	};
 
-	// Avoid hydration mismatch — render nothing until mounted
 	if (!mounted) return null;
 
 	return (
