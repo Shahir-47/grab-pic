@@ -1,18 +1,39 @@
 import os
 import re
-import time
 import tempfile
 import psycopg2
-from collections import defaultdict
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from deepface import DeepFace
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# --- Rate Limiting: 5 requests per minute per IP (production-grade via slowapi) ---
+def _get_client_ip(request: Request) -> str:
+    """Extract real client IP from proxy headers, falling back to direct connection."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=_get_client_ip)
 app = FastAPI()
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        content={"error": "Too many search requests. Please wait a moment and try again."},
+        status_code=429,
+    )
 
 # --- CORS: Only allow your Next.js frontend, not the entire internet ---
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
@@ -24,30 +45,15 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-# --- Rate Limiting: 5 requests per minute per IP ---
-RATE_LIMIT = 5
-RATE_WINDOW = 60  # seconds
-_request_log: dict[str, list[float]] = defaultdict(list)
-
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB — no reason for a selfie to be larger
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
-
-def _get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
-def _is_rate_limited(ip: str) -> bool:
-    now = time.time()
-    # Prune old entries
-    _request_log[ip] = [t for t in _request_log[ip] if now - t < RATE_WINDOW]
-    if len(_request_log[ip]) >= RATE_LIMIT:
-        return True
-    _request_log[ip].append(now)
-    return False
+# Magic bytes for real image validation (Content-Type header can be spoofed)
+IMAGE_SIGNATURES = {
+    b'\xff\xd8\xff': "image/jpeg",       # JPEG
+    b'\x89PNG\r\n\x1a\n': "image/png",   # PNG
+    b'RIFF': "image/webp",               # WebP (RIFF....WEBP)
+}
 
 def get_db_connection():
     return psycopg2.connect(
@@ -58,37 +64,53 @@ def get_db_connection():
         port=os.getenv("DB_PORT")
     )
 
-@app.post("/search")
-async def search_faces(request: Request, album_id: str = Form(...), file: UploadFile = File(...)):
-    # --- Rate limit check ---
-    client_ip = _get_client_ip(request)
-    if _is_rate_limited(client_ip):
-        return JSONResponse(
-            content={"error": "Too many search requests. Please wait a moment and try again."},
-            status_code=429
-        )
+def _validate_image_bytes(content: bytes) -> bool:
+    """Verify the file is actually an image by checking magic bytes, not just the header."""
+    if len(content) < 12:
+        return False
+    # JPEG: starts with FF D8 FF
+    if content[:3] == b'\xff\xd8\xff':
+        return True
+    # PNG: starts with 89 50 4E 47 0D 0A 1A 0A
+    if content[:8] == b'\x89PNG\r\n\x1a\n':
+        return True
+    # WebP: starts with RIFF....WEBP
+    if content[:4] == b'RIFF' and content[8:12] == b'WEBP':
+        return True
+    return False
 
+
+@app.post("/search")
+@limiter.limit("5/minute")
+async def search_faces(request: Request, album_id: str = Form(...), file: UploadFile = File(...)):
     # --- Validate album_id format (must look like a UUID) ---
     if not re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', album_id, re.I):
         return JSONResponse(content={"error": "Invalid album."}, status_code=400)
 
-    # --- Validate file type ---
+    # --- Validate MIME type from header (first line of defense) ---
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         return JSONResponse(
             content={"error": "Invalid file type. Please upload a JPEG, PNG, or WebP image."},
             status_code=400
         )
 
-    # --- Validate file size (read up to limit + 1 byte to detect oversized) ---
-    content = await file.read()
+    # --- Validate file size: read up to limit + 1 byte to detect oversized files ---
+    content = await file.read(MAX_FILE_SIZE + 1)
     if len(content) > MAX_FILE_SIZE:
         return JSONResponse(
-            content={"error": "File too large. Maximum size is 10 MB."},
+            content={"error": "File too large. Maximum selfie size is 5 MB."},
             status_code=400
         )
 
     if len(content) == 0:
         return JSONResponse(content={"error": "Empty file."}, status_code=400)
+
+    # --- Validate actual file content via magic bytes (prevents spoofed Content-Type) ---
+    if not _validate_image_bytes(content):
+        return JSONResponse(
+            content={"error": "File is not a valid image. Please upload a real JPEG, PNG, or WebP photo."},
+            status_code=400
+        )
 
     # Save the guest's uploaded selfie temporarily
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
