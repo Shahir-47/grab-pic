@@ -563,7 +563,7 @@ export default function AlbumViewPage() {
 							</p>
 						</div>
 
-						<div className="flex justify-center p-4 bg-white rounded-xl border border-zinc-200 dark:border-zinc-700">
+						<div className="flex flex-col items-center gap-3 p-5 bg-white rounded-xl border border-zinc-200 dark:border-zinc-700">
 							<QRCodeSVG
 								value={`${window.location.origin}/albums/${albumId}/guest`}
 								size={180}
@@ -572,11 +572,10 @@ export default function AlbumViewPage() {
 								fgColor="#7c3aed"
 								bgColor="#ffffff"
 							/>
+							<p className="text-xs text-zinc-400">
+								Scan with a phone camera to open
+							</p>
 						</div>
-
-						<p className="text-center text-xs text-zinc-400">
-							Scan with a phone camera to open
-						</p>
 
 						<div className="flex items-center space-x-2 bg-zinc-100 dark:bg-zinc-800 p-2 rounded-xl border border-zinc-200 dark:border-zinc-700">
 							<div className="flex-1 truncate text-sm text-zinc-600 dark:text-zinc-300 px-2 font-mono">
