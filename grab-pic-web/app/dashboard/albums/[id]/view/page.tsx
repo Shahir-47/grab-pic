@@ -19,9 +19,12 @@ import {
 	CheckSquare,
 	Check,
 	Copy,
+	SquareCheckBig,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import JSZip from "jszip";
+import { fetchImageAsBlob, downloadImage } from "@/lib/download";
 
 interface Photo {
 	id: string;
@@ -49,6 +52,7 @@ export default function AlbumViewPage() {
 
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isCopied, setIsCopied] = useState(false);
+	const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
 	useEffect(() => {
 		const fetchPhotos = async () => {
@@ -141,6 +145,50 @@ export default function AlbumViewPage() {
 		}
 	};
 
+	const handleSelectAll = () => {
+		if (selectedPhotoIds.length === photos.length) {
+			setSelectedPhotoIds([]);
+		} else {
+			setSelectedPhotoIds(photos.map((p) => p.id));
+		}
+	};
+
+	const handleDownloadSelectedZip = async () => {
+		const idsToDownload = selectedPhotoIds.length > 0 ? selectedPhotoIds : [];
+		if (idsToDownload.length === 0) return;
+
+		setIsDownloadingZip(true);
+		try {
+			const zip = new JSZip();
+			const photosToDownload = photos.filter((p) =>
+				idsToDownload.includes(p.id),
+			);
+
+			const fetchPromises = photosToDownload.map(async (photo, index) => {
+				const blob = await fetchImageAsBlob(photo.viewUrl);
+				const ext = blob.type.includes("png") ? "png" : "jpg";
+				zip.file(`grabpic-${index + 1}.${ext}`, blob);
+			});
+
+			await Promise.all(fetchPromises);
+
+			const zipBlob = await zip.generateAsync({ type: "blob" });
+			const url = URL.createObjectURL(zipBlob);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = `grabpic-album-${albumId}.zip`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Zip download failed:", error);
+			alert("Failed to download photos as zip.");
+		} finally {
+			setIsDownloadingZip(false);
+		}
+	};
+
 	const handleTogglePrivacySelected = async (makePublic: boolean) => {
 		if (selectedPhotoIds.length === 0) return;
 
@@ -216,21 +264,10 @@ export default function AlbumViewPage() {
 
 	const handleDownload = async () => {
 		if (!selectedPhoto) return;
-		try {
-			const response = await fetch(selectedPhoto.viewUrl);
-			const blob = await response.blob();
-			const url = window.URL.createObjectURL(blob);
-			const link = document.createElement("a");
-			link.href = url;
-			link.download = `grabpic-${selectedPhoto.id}.jpg`;
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-			window.URL.revokeObjectURL(url);
-		} catch (error) {
-			console.error("Download failed:", error);
-			alert("Failed to download image.");
-		}
+		await downloadImage(
+			selectedPhoto.viewUrl,
+			`grabpic-${selectedPhoto.id}.jpg`,
+		);
 	};
 
 	const handleDeleteSingle = async () => {
@@ -285,6 +322,33 @@ export default function AlbumViewPage() {
 								<span className="flex items-center text-sm font-bold text-zinc-600 dark:text-zinc-300 mr-2">
 									{selectedPhotoIds.length} Selected
 								</span>
+
+								<Button
+									onClick={handleSelectAll}
+									variant="outline"
+									size="sm"
+									className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+								>
+									<SquareCheckBig className="w-4 h-4 mr-2" />
+									{selectedPhotoIds.length === photos.length
+										? "Deselect All"
+										: "Select All"}
+								</Button>
+
+								<Button
+									onClick={handleDownloadSelectedZip}
+									variant="outline"
+									size="sm"
+									disabled={selectedPhotoIds.length === 0 || isDownloadingZip}
+									className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+								>
+									{isDownloadingZip ? (
+										<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+									) : (
+										<Download className="w-4 h-4 mr-2" />
+									)}
+									{isDownloadingZip ? "Zipping..." : "Download Zip"}
+								</Button>
 
 								<Button
 									onClick={() => handleTogglePrivacySelected(true)}

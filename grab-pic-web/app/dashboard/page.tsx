@@ -9,6 +9,8 @@ import {
 	Loader2,
 	Calendar,
 	ChevronRight,
+	Plus,
+	FolderOpen,
 } from "lucide-react";
 
 interface Album {
@@ -80,16 +82,19 @@ export default function DashboardPage() {
 							My Albums
 						</h1>
 						<p className="text-zinc-500 mt-1">
-							Manage your events and upload photos.
+							Create and manage your photo albums.
 						</p>
 					</div>
 				</div>
 
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 					{/* Create New Album Card */}
-					<div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 rounded-2xl p-6 flex flex-col justify-center">
+					<div className="bg-indigo-50 dark:bg-indigo-950/20 border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-2xl p-6 flex flex-col justify-center">
+						<div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg flex items-center justify-center mb-3">
+							<Plus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+						</div>
 						<h3 className="font-bold text-lg text-indigo-900 dark:text-indigo-100 mb-1">
-							Start a New Event
+							Create New Album
 						</h3>
 						<p className="text-sm text-indigo-700/70 dark:text-indigo-300/70 mb-4">
 							Give your album a name to start uploading.
@@ -124,6 +129,20 @@ export default function DashboardPage() {
 						</div>
 					)}
 
+					{/* Empty State */}
+					{!isLoading && albums.length === 0 && (
+						<div className="col-span-1 sm:col-span-1 lg:col-span-2 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center justify-center py-16 px-6 text-center">
+							<FolderOpen className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mb-4" />
+							<h3 className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+								No albums yet
+							</h3>
+							<p className="text-sm text-zinc-500 max-w-xs">
+								Create your first album to start uploading and sharing photos
+								with guests.
+							</p>
+						</div>
+					)}
+
 					{/* Existing Albums List */}
 					{!isLoading &&
 						albums.map((album) => (
@@ -132,38 +151,47 @@ export default function DashboardPage() {
 								onClick={() =>
 									router.push(`/dashboard/albums/${album.id}/view`)
 								}
-								className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col justify-between cursor-pointer hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group"
+								className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden cursor-pointer hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group"
 							>
-								<div>
-									<div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center mb-4 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 transition-colors">
-										<ImageIcon className="w-5 h-5 text-zinc-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
-									</div>
-									<h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 line-clamp-1">
-										{album.title}
-									</h3>
-									<p className="text-sm text-zinc-500 flex items-center gap-1.5 mt-2">
-										<Calendar className="w-3.5 h-3.5" />
-										{new Date(album.createdAt).toLocaleDateString()}
-									</p>
-								</div>
+								{/* Color accent bar */}
+								<div className="h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500" />
 
-								<div className="mt-6 flex gap-2">
-									<Button
-										variant="outline"
-										className="w-full text-xs"
-										onClick={(e) => {
-											e.stopPropagation();
-											router.push(`/dashboard/albums/${album.id}`);
-										}}
-									>
-										Upload More
-									</Button>
-									<Button
-										variant="secondary"
-										className="w-full text-xs bg-zinc-100 dark:bg-zinc-800"
-									>
-										View Gallery <ChevronRight className="w-3 h-3 ml-1" />
-									</Button>
+								<div className="p-6 flex flex-col justify-between">
+									<div>
+										<div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center mb-4 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 transition-colors">
+											<ImageIcon className="w-5 h-5 text-zinc-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+										</div>
+										<h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 line-clamp-1">
+											{album.title}
+										</h3>
+										<p className="text-sm text-zinc-500 flex items-center gap-1.5 mt-2">
+											<Calendar className="w-3.5 h-3.5" />
+											{new Date(album.createdAt).toLocaleDateString(undefined, {
+												year: "numeric",
+												month: "short",
+												day: "numeric",
+											})}
+										</p>
+									</div>
+
+									<div className="mt-6 flex gap-2">
+										<Button
+											variant="outline"
+											className="w-full text-xs h-9"
+											onClick={(e) => {
+												e.stopPropagation();
+												router.push(`/dashboard/albums/${album.id}`);
+											}}
+										>
+											Upload More
+										</Button>
+										<Button
+											variant="secondary"
+											className="w-full text-xs h-9 bg-zinc-100 dark:bg-zinc-800"
+										>
+											View Gallery <ChevronRight className="w-3 h-3 ml-1" />
+										</Button>
+									</div>
 								</div>
 							</div>
 						))}

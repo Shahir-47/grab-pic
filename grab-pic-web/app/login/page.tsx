@@ -64,7 +64,7 @@ export default function LoginPage() {
 						GrabPic
 					</h1>
 					<p className="text-zinc-500 dark:text-zinc-400 max-w-70">
-						Welcome back! Sign in to manage your events and share memories.
+						Welcome back! Sign in to manage your albums and share memories.
 					</p>
 				</div>
 

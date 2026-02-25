@@ -11,7 +11,16 @@ import {
 	Video,
 	Images,
 	UserSearch,
+	X,
+	Download,
+	Check,
+	CheckSquare,
+	Maximize2,
+	ChevronLeft,
+	ChevronRight,
 } from "lucide-react";
+import JSZip from "jszip";
+import { fetchImageAsBlob, downloadImage } from "@/lib/download";
 
 interface Photo {
 	id: string;
@@ -33,6 +42,12 @@ export default function GuestWelcomePage() {
 
 	const [selfie, setSelfie] = useState<File | null>(null);
 	const [isSearching, setIsSearching] = useState(false);
+
+	const [fullScreenPhoto, setFullScreenPhoto] = useState<Photo | null>(null);
+	const [fullScreenList, setFullScreenList] = useState<Photo[]>([]);
+	const [isGuestSelecting, setIsGuestSelecting] = useState(false);
+	const [guestSelectedIds, setGuestSelectedIds] = useState<string[]>([]);
+	const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
 	const [isMobile, setIsMobile] = useState(true);
 	const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -125,6 +140,63 @@ export default function GuestWelcomePage() {
 	const handleMobileSelfieSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files && e.target.files[0]) {
 			setSelfie(e.target.files[0]);
+		}
+	};
+
+	const openFullScreen = (photo: Photo, list: Photo[]) => {
+		setFullScreenPhoto(photo);
+		setFullScreenList(list);
+	};
+
+	const navigateFullScreen = (direction: "prev" | "next") => {
+		if (!fullScreenPhoto) return;
+		const idx = fullScreenList.findIndex((p) => p.id === fullScreenPhoto.id);
+		const newIdx = direction === "prev" ? idx - 1 : idx + 1;
+		if (newIdx >= 0 && newIdx < fullScreenList.length) {
+			setFullScreenPhoto(fullScreenList[newIdx]);
+		}
+	};
+
+	const handleDownloadSingle = async (photo: Photo) => {
+		await downloadImage(photo.viewUrl, `grabpic-${photo.id}.jpg`);
+	};
+
+	const toggleGuestSelect = (photoId: string) => {
+		setGuestSelectedIds((prev) =>
+			prev.includes(photoId)
+				? prev.filter((id) => id !== photoId)
+				: [...prev, photoId],
+		);
+	};
+
+	const handleGuestDownloadZip = async (photoList: Photo[]) => {
+		const toDownload = photoList.filter((p) => guestSelectedIds.includes(p.id));
+		if (toDownload.length === 0) return;
+
+		setIsDownloadingZip(true);
+		try {
+			const zip = new JSZip();
+			const fetchPromises = toDownload.map(async (photo, index) => {
+				const blob = await fetchImageAsBlob(photo.viewUrl);
+				const ext = blob.type.includes("png") ? "png" : "jpg";
+				zip.file(`grabpic-${index + 1}.${ext}`, blob);
+			});
+			await Promise.all(fetchPromises);
+
+			const zipBlob = await zip.generateAsync({ type: "blob" });
+			const url = URL.createObjectURL(zipBlob);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = `grabpic-photos.zip`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Zip download failed:", error);
+			alert("Failed to download photos.");
+		} finally {
+			setIsDownloadingZip(false);
 		}
 	};
 
@@ -347,31 +419,132 @@ export default function GuestWelcomePage() {
 								</span>
 							</div>
 
+							{/* Selection toolbar for matched photos */}
+							<div className="flex flex-wrap items-center gap-2">
+								<Button
+									variant={isGuestSelecting ? "secondary" : "outline"}
+									size="sm"
+									onClick={() => {
+										setIsGuestSelecting(!isGuestSelecting);
+										setGuestSelectedIds([]);
+									}}
+								>
+									<CheckSquare className="w-4 h-4 mr-1.5" />
+									{isGuestSelecting ? "Cancel" : "Select"}
+								</Button>
+								{isGuestSelecting && (
+									<>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => {
+												if (guestSelectedIds.length === matchedPhotos.length) {
+													setGuestSelectedIds([]);
+												} else {
+													setGuestSelectedIds(matchedPhotos.map((p) => p.id));
+												}
+											}}
+										>
+											{guestSelectedIds.length === matchedPhotos.length
+												? "Deselect All"
+												: "Select All"}
+										</Button>
+										<span className="text-sm text-zinc-500 font-medium">
+											{guestSelectedIds.length} selected
+										</span>
+										<Button
+											size="sm"
+											disabled={
+												guestSelectedIds.length === 0 || isDownloadingZip
+											}
+											onClick={() => handleGuestDownloadZip(matchedPhotos)}
+											className="bg-indigo-600 hover:bg-indigo-700 text-white"
+										>
+											{isDownloadingZip ? (
+												<Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+											) : (
+												<Download className="w-4 h-4 mr-1.5" />
+											)}
+											Download Zip
+										</Button>
+									</>
+								)}
+							</div>
+
 							<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
 								{matchedPhotos.map((photo) => (
 									<div
 										key={photo.id}
-										className="group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-md hover:shadow-2xl border-4 border-indigo-500/30 cursor-pointer transition-all duration-300"
-										onClick={() => window.open(photo.viewUrl, "_blank")}
+										className={`group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-md hover:shadow-2xl cursor-pointer transition-all duration-300
+											${isGuestSelecting && guestSelectedIds.includes(photo.id) ? "ring-4 ring-indigo-500 scale-[0.98]" : "border-4 border-indigo-500/30"}`}
+										onClick={() => {
+											if (isGuestSelecting) {
+												toggleGuestSelect(photo.id);
+											} else {
+												openFullScreen(photo, matchedPhotos);
+											}
+										}}
 									>
 										<img
 											src={photo.viewUrl}
 											alt="Matched Photo"
 											className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
 										/>
+
+										{/* Selection indicator */}
+										{isGuestSelecting && (
+											<div className="absolute top-3 right-3 z-10">
+												<div
+													className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-md
+													${guestSelectedIds.includes(photo.id) ? "bg-indigo-600 border-indigo-600" : "bg-black/30 border-white/80"}`}
+												>
+													{guestSelectedIds.includes(photo.id) && (
+														<Check className="w-4 h-4 text-white" />
+													)}
+												</div>
+											</div>
+										)}
+
+										{/* Hover overlay with actions */}
+										{!isGuestSelecting && (
+											<div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
+												<div className="flex gap-2">
+													<button
+														onClick={(e) => {
+															e.stopPropagation();
+															openFullScreen(photo, matchedPhotos);
+														}}
+														className="p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-colors"
+														title="View Full Screen"
+													>
+														<Maximize2 className="w-4 h-4 text-zinc-800" />
+													</button>
+													<button
+														onClick={(e) => {
+															e.stopPropagation();
+															handleDownloadSingle(photo);
+														}}
+														className="p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-colors"
+														title="Download"
+													>
+														<Download className="w-4 h-4 text-zinc-800" />
+													</button>
+												</div>
+											</div>
+										)}
 									</div>
 								))}
 							</div>
 						</div>
 					)}
 
-					{/* --- PUBLIC EVENT GALLERY --- */}
+					{/* --- PUBLIC ALBUM GALLERY --- */}
 					<div className="space-y-6">
 						<div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
 							<div className="flex items-center gap-3">
 								<Images className="w-6 h-6 text-zinc-400" />
 								<h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-									Event Gallery
+									Album Gallery
 								</h2>
 							</div>
 							<span className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm">
@@ -397,14 +570,37 @@ export default function GuestWelcomePage() {
 									<div
 										key={photo.id}
 										className="group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-all duration-300"
-										onClick={() => window.open(photo.viewUrl, "_blank")}
+										onClick={() => openFullScreen(photo, publicPhotos)}
 									>
 										<img
 											src={photo.viewUrl}
-											alt="Public Event Photo"
+											alt="Public Album Photo"
 											className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
 										/>
-										<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+										<div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
+											<div className="flex gap-2">
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														openFullScreen(photo, publicPhotos);
+													}}
+													className="p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-colors"
+													title="View Full Screen"
+												>
+													<Maximize2 className="w-4 h-4 text-zinc-800" />
+												</button>
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														handleDownloadSingle(photo);
+													}}
+													className="p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-colors"
+													title="Download"
+												>
+													<Download className="w-4 h-4 text-zinc-800" />
+												</button>
+											</div>
+										</div>
 									</div>
 								))}
 							</div>
@@ -412,6 +608,64 @@ export default function GuestWelcomePage() {
 					</div>
 				</div>
 			</div>
+
+			{/* --- FULLSCREEN PHOTO MODAL --- */}
+			{fullScreenPhoto && (
+				<div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200">
+					{/* Close button */}
+					<button
+						onClick={() => setFullScreenPhoto(null)}
+						className="absolute top-5 right-5 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-10"
+					>
+						<X className="w-6 h-6" />
+					</button>
+
+					{/* Download button */}
+					<button
+						onClick={() => handleDownloadSingle(fullScreenPhoto)}
+						className="absolute top-5 right-20 p-3 bg-white/10 hover:bg-indigo-600 rounded-full text-white transition-colors z-10"
+						title="Download this photo"
+					>
+						<Download className="w-5 h-5" />
+					</button>
+
+					{/* Previous arrow */}
+					{fullScreenList.findIndex((p) => p.id === fullScreenPhoto.id) > 0 && (
+						<button
+							onClick={() => navigateFullScreen("prev")}
+							className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-10"
+						>
+							<ChevronLeft className="w-6 h-6" />
+						</button>
+					)}
+
+					{/* Next arrow */}
+					{fullScreenList.findIndex((p) => p.id === fullScreenPhoto.id) <
+						fullScreenList.length - 1 && (
+						<button
+							onClick={() => navigateFullScreen("next")}
+							className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-10"
+						>
+							<ChevronRight className="w-6 h-6" />
+						</button>
+					)}
+
+					{/* Image */}
+					<div className="relative max-w-6xl w-full h-[85vh] flex items-center justify-center p-4">
+						<img
+							src={fullScreenPhoto.viewUrl}
+							alt="Full Screen"
+							className="max-w-full max-h-full object-contain rounded-sm shadow-2xl"
+						/>
+					</div>
+
+					{/* Counter */}
+					<div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/60 text-sm font-medium">
+						{fullScreenList.findIndex((p) => p.id === fullScreenPhoto.id) + 1} /{" "}
+						{fullScreenList.length}
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
