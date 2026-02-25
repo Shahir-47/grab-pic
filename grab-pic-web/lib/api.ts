@@ -1,7 +1,5 @@
 import { supabase } from "@/lib/supabase";
 
-const API_BASE_URL = "http://localhost:8080";
-
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 	const {
 		data: { session },
@@ -21,10 +19,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 		headers.set("Content-Type", "application/json");
 	}
 
-	const isFullUrl = endpoint.startsWith("http");
-	const url = isFullUrl ? endpoint : `${API_BASE_URL}${endpoint}`;
-
-	return fetch(url, {
+	return fetch(endpoint, {
 		...options,
 		headers,
 	});

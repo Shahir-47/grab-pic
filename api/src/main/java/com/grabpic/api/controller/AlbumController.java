@@ -21,7 +21,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/albums")
-@CrossOrigin(origins = "https://0dc0-69-142-187-136.ngrok-free.app")
 public class AlbumController {
 
     private final S3StorageService s3StorageService;
@@ -62,7 +61,14 @@ public class AlbumController {
     @GetMapping("/{albumId}/upload-urls")
     public ResponseEntity<List<String>> getUploadUrls(
             @PathVariable UUID albumId,
-            @RequestParam(defaultValue = "1") int count) {
+            @RequestParam(defaultValue = "1") int count,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+        if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
+            return ResponseEntity.status(403).build();
+        }
 
         if (count > 10000) {
             return ResponseEntity.badRequest().build();
@@ -72,7 +78,8 @@ public class AlbumController {
 
     @PostMapping("/{albumId}/photos")
     public ResponseEntity<?> saveUploadedPhotos(@PathVariable UUID albumId,
-                                                @RequestBody PhotoSaveRequest request) {
+                                                @RequestBody PhotoSaveRequest request,
+                                                @AuthenticationPrincipal Jwt jwt) {
 
         Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
         if (albumOpt.isEmpty()) {
@@ -80,6 +87,9 @@ public class AlbumController {
         }
 
         SharedAlbum album = albumOpt.get();
+        if (!album.getHostId().equals(jwt.getSubject())) {
+            return ResponseEntity.status(403).body("You do not own this album.");
+        }
         List<Photo> photosToSave = new ArrayList<>();
 
         for (PhotoSaveRequest.PhotoItem item : request.getPhotos()) {
@@ -105,7 +115,14 @@ public class AlbumController {
     }
 
     @GetMapping("/{albumId}/photos")
-    public ResponseEntity<List<com.grabpic.api.dto.PhotoResponse>> getAlbumPhotos(@PathVariable UUID albumId) {
+    public ResponseEntity<?> getAlbumPhotos(@PathVariable UUID albumId,
+                                            @AuthenticationPrincipal Jwt jwt) {
+
+        Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+        if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
+            return ResponseEntity.status(403).body("You do not own this album.");
+        }
 
         List<Photo> photos = photoRepository.findByAlbumId(albumId);
         List<com.grabpic.api.dto.PhotoResponse> response = new ArrayList<>();
@@ -139,8 +156,22 @@ public class AlbumController {
     }
 
     @DeleteMapping("/{albumId}/photos/{photoId}")
-    public ResponseEntity<?> deletePhoto(@PathVariable UUID albumId, @PathVariable UUID photoId) {
+    public ResponseEntity<?> deletePhoto(@PathVariable UUID albumId,
+                                         @PathVariable UUID photoId,
+                                         @AuthenticationPrincipal Jwt jwt) {
         try {
+            Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+            if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
+            if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
+                return ResponseEntity.status(403).body("You do not own this album.");
+            }
+
+            Optional<Photo> photoOpt = photoRepository.findById(photoId);
+            if (photoOpt.isEmpty()) return ResponseEntity.notFound().build();
+            if (!photoOpt.get().getAlbum().getId().equals(albumId)) {
+                return ResponseEntity.badRequest().body("Photo does not belong to this album.");
+            }
+
             photoRepository.deleteById(photoId);
             return ResponseEntity.ok().body("Photo removed successfully.");
         } catch (Exception e) {
@@ -149,8 +180,15 @@ public class AlbumController {
     }
 
     @DeleteMapping("/{albumId}")
-    public ResponseEntity<?> deleteAlbum(@PathVariable UUID albumId) {
+    public ResponseEntity<?> deleteAlbum(@PathVariable UUID albumId,
+                                         @AuthenticationPrincipal Jwt jwt) {
         try {
+            Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+            if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
+            if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
+                return ResponseEntity.status(403).body("You do not own this album.");
+            }
+
             albumRepository.deleteById(albumId);
             return ResponseEntity.ok().body("Album deleted successfully.");
         } catch (Exception e) {
@@ -195,8 +233,17 @@ public class AlbumController {
     }
 
     @PutMapping("/{albumId}/photos/{photoId}/privacy")
-    public ResponseEntity<?> togglePhotoPrivacy(@PathVariable UUID albumId, @PathVariable UUID photoId, @RequestParam boolean makePublic) {
+    public ResponseEntity<?> togglePhotoPrivacy(@PathVariable UUID albumId,
+                                                @PathVariable UUID photoId,
+                                                @RequestParam boolean makePublic,
+                                                @AuthenticationPrincipal Jwt jwt) {
         try {
+            Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+            if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
+            if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
+                return ResponseEntity.status(403).body("You do not own this album.");
+            }
+
             Optional<Photo> photoOpt = photoRepository.findById(photoId);
             if (photoOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
