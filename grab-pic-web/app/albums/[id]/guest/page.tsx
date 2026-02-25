@@ -26,6 +26,8 @@ export default function GuestWelcomePage() {
 
 	const [albumTitle, setAlbumTitle] = useState("");
 	const [publicPhotos, setPublicPhotos] = useState<Photo[]>([]);
+	const [matchedPhotos, setMatchedPhotos] = useState<Photo[]>([]); // NEW: Holds AI matches
+
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState("");
 
@@ -129,10 +131,52 @@ export default function GuestWelcomePage() {
 	const handleSearch = async () => {
 		if (!selfie) return;
 		setIsSearching(true);
-		setTimeout(() => {
-			alert("Ready to build the AI Search Engine backend!");
+		setMatchedPhotos([]); // clear previous results
+
+		try {
+			// Send selfie to Python Vector Search API via Next.js Proxy
+			const formData = new FormData();
+			formData.append("file", selfie);
+			formData.append("album_id", albumId);
+
+			const aiRes = await fetch("/api/ai/search", {
+				method: "POST",
+				body: formData,
+			});
+
+			if (!aiRes.ok) {
+				const errData = await aiRes.json();
+				throw new Error(errData.error || "Failed to analyze face");
+			}
+
+			const aiData = await aiRes.json();
+			const photoIds = aiData.matched_photo_ids;
+
+			if (!photoIds || photoIds.length === 0) {
+				alert("We couldn't find any photos of you in this album!");
+				setIsSearching(false);
+				return;
+			}
+
+			// Fetch the Secure S3 URLs from Spring Boot for those exact IDs
+			const sbRes = await fetch(`/api/albums/${albumId}/guest/search-results`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(photoIds),
+			});
+
+			if (!sbRes.ok) throw new Error("Failed to retrieve your photos");
+
+			const finalPhotos = await sbRes.json();
+			setMatchedPhotos(finalPhotos);
+		} catch (err: unknown) {
+			console.error(err);
+			alert(
+				err instanceof Error ? err.message : "An error occurred during search.",
+			);
+		} finally {
 			setIsSearching(false);
-		}, 1500);
+		}
 	};
 
 	if (isLoading) {
@@ -160,7 +204,7 @@ export default function GuestWelcomePage() {
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row">
 			{/* LEFT SIDEBAR: The Scanner */}
-			<div className="w-full lg:w-[450px] shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 flex flex-col items-center justify-center p-8 lg:p-10 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+			<div className="w-full lg:w-112.5 shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 flex flex-col items-center justify-center p-8 lg:p-10 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
 				<div className="w-full max-w-sm space-y-8 text-center">
 					<div>
 						<div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
@@ -286,51 +330,86 @@ export default function GuestWelcomePage() {
 				</div>
 			</div>
 
-			{/* RIGHT MAIN AREA: The Public Gallery */}
+			{/* RIGHT MAIN AREA: Dynamic Galleries */}
 			<div className="flex-1 p-6 lg:p-12 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-950/50">
-				<div className="max-w-6xl mx-auto space-y-8">
-					<div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
-						<div className="flex items-center gap-3">
-							<Images className="w-6 h-6 text-zinc-400" />
-							<h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-								Event Gallery
-							</h2>
-						</div>
-						<span className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm">
-							{publicPhotos.length}{" "}
-							{publicPhotos.length === 1 ? "Photo" : "Photos"}
-						</span>
-					</div>
+				<div className="max-w-6xl mx-auto space-y-12">
+					{/* --- AI MATCHED PHOTOS --- */}
+					{matchedPhotos.length > 0 && (
+						<div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+							<div className="flex items-center gap-3 border-b border-indigo-100 dark:border-indigo-900/50 pb-4">
+								<UserSearch className="w-6 h-6 text-indigo-500" />
+								<h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+									Your Photos
+								</h2>
+								<span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm ml-auto">
+									{matchedPhotos.length} Match
+									{matchedPhotos.length === 1 ? "" : "es"}
+								</span>
+							</div>
 
-					{publicPhotos.length === 0 ? (
-						<div className="text-center py-32 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 border-dashed">
-							<ImageIcon className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-4" />
-							<h3 className="text-lg font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-								No public photos yet
-							</h3>
-							<p className="text-zinc-500 text-sm max-w-xs mx-auto">
-								The host hasn&apos;t made any photos public. Take a selfie to
-								find your private photos!
-							</p>
-						</div>
-					) : (
-						<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-							{publicPhotos.map((photo) => (
-								<div
-									key={photo.id}
-									className="group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-all duration-300"
-									onClick={() => window.open(photo.viewUrl, "_blank")}
-								>
-									<img
-										src={photo.viewUrl}
-										alt="Public Event Photo"
-										className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-									/>
-									<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-								</div>
-							))}
+							<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+								{matchedPhotos.map((photo) => (
+									<div
+										key={photo.id}
+										className="group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-md hover:shadow-2xl border-4 border-indigo-500/30 cursor-pointer transition-all duration-300"
+										onClick={() => window.open(photo.viewUrl, "_blank")}
+									>
+										<img
+											src={photo.viewUrl}
+											alt="Matched Photo"
+											className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+										/>
+									</div>
+								))}
+							</div>
 						</div>
 					)}
+
+					{/* --- PUBLIC EVENT GALLERY --- */}
+					<div className="space-y-6">
+						<div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+							<div className="flex items-center gap-3">
+								<Images className="w-6 h-6 text-zinc-400" />
+								<h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+									Event Gallery
+								</h2>
+							</div>
+							<span className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm">
+								{publicPhotos.length}{" "}
+								{publicPhotos.length === 1 ? "Photo" : "Photos"}
+							</span>
+						</div>
+
+						{publicPhotos.length === 0 ? (
+							<div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 border-dashed">
+								<ImageIcon className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-4" />
+								<h3 className="text-lg font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+									No public photos yet
+								</h3>
+								<p className="text-zinc-500 text-sm max-w-xs mx-auto">
+									The host hasn&apos;t made any photos public. Take a selfie to
+									find your private photos!
+								</p>
+							</div>
+						) : (
+							<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+								{publicPhotos.map((photo) => (
+									<div
+										key={photo.id}
+										className="group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-all duration-300"
+										onClick={() => window.open(photo.viewUrl, "_blank")}
+									>
+										<img
+											src={photo.viewUrl}
+											alt="Public Event Photo"
+											className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+										/>
+										<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+									</div>
+								))}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>

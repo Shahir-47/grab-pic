@@ -215,4 +215,32 @@ public class AlbumController {
             return ResponseEntity.internalServerError().body("Failed to update privacy");
         }
     }
+
+    @PostMapping("/{albumId}/guest/search-results")
+    public ResponseEntity<?> getGuestSearchResults(@PathVariable UUID albumId, @RequestBody List<UUID> photoIds) {
+        Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+        if (albumOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Photo> allPhotos = photoRepository.findAllById(photoIds);
+        List<com.grabpic.api.dto.PhotoResponse> matchedPhotos = new ArrayList<>();
+
+        for (Photo photo : allPhotos) {
+            // Verify the photo actually belongs to this album to prevent cross-album snooping
+            if (photo.getAlbum().getId().equals(albumId)) {
+                String secureViewUrl = s3StorageService.generateViewUrl(photo.getStorageUrl());
+
+                matchedPhotos.add(new com.grabpic.api.dto.PhotoResponse(
+                        photo.getId().toString(),
+                        secureViewUrl,
+                        photo.getAccessMode() == AccessMode.PUBLIC,
+                        photo.isProcessed(),
+                        0, // Hide face coordinates from guests
+                        new ArrayList<>()
+                ));
+            }
+        }
+        return ResponseEntity.ok(matchedPhotos);
+    }
 }
