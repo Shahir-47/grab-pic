@@ -22,6 +22,7 @@ import {
 	SquareCheckBig,
 	ArrowLeft,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { apiFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { useRequireAuth } from "@/lib/useRequireAuth";
@@ -549,7 +550,7 @@ export default function AlbumViewPage() {
 							<X className="w-5 h-5" />
 						</button>
 
-						<div className="text-center space-y-4 mb-6 mt-2">
+						<div className="text-center space-y-4 mb-4 mt-2">
 							<div className="w-12 h-12 bg-violet-100 dark:bg-violet-900 rounded-full flex items-center justify-center mx-auto">
 								<Share2 className="w-6 h-6 text-violet-600 dark:text-violet-400" />
 							</div>
@@ -561,6 +562,21 @@ export default function AlbumViewPage() {
 								their photos.
 							</p>
 						</div>
+
+						<div className="flex justify-center p-4 bg-white rounded-xl border border-zinc-200 dark:border-zinc-700">
+							<QRCodeSVG
+								value={`${window.location.origin}/albums/${albumId}/guest`}
+								size={180}
+								level="H"
+								marginSize={2}
+								fgColor="#7c3aed"
+								bgColor="#ffffff"
+							/>
+						</div>
+
+						<p className="text-center text-xs text-zinc-400">
+							Scan with a phone camera to open
+						</p>
 
 						<div className="flex items-center space-x-2 bg-zinc-100 dark:bg-zinc-800 p-2 rounded-xl border border-zinc-200 dark:border-zinc-700">
 							<div className="flex-1 truncate text-sm text-zinc-600 dark:text-zinc-300 px-2 font-mono">
