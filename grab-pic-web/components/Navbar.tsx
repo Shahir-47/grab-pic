@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Camera, LogOut, LayoutDashboard, LogIn } from "lucide-react";
+import { LogOut, LayoutDashboard, LogIn } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import GrabPicLogo from "@/components/GrabPicLogo";
 
 export default function Navbar() {
 	const router = useRouter();
@@ -43,33 +44,26 @@ export default function Navbar() {
 	if (isGuestPage) return null;
 
 	return (
-		<nav className="sticky top-0 z-40 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-lg">
-			<div className="max-w-7xl mx-auto flex items-center justify-between h-14 px-4 sm:px-6 lg:px-8">
+		<nav className="sticky top-0 z-40 w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl">
+			<div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
 				{/* Logo / Brand */}
 				<Link
 					href={isLoggedIn ? "/dashboard" : "/"}
-					className="flex items-center gap-2.5 group"
+					className="group transition-transform hover:scale-[1.02] active:scale-[0.98]"
 				>
-					<div className="bg-zinc-900 dark:bg-zinc-100 p-1.5 rounded-lg transition-transform group-hover:scale-105">
-						<Camera className="w-4 h-4 text-white dark:text-zinc-900" />
-					</div>
-					<span className="text-lg font-black tracking-tighter text-zinc-900 dark:text-zinc-50">
-						GrabPic
-					</span>
+					<GrabPicLogo size="sm" />
 				</Link>
 
 				{/* Right side */}
-				<div className="flex items-center gap-3">
+				<div className="flex items-center gap-2">
 					{isLoggedIn ? (
 						<>
-							{/* Email badge */}
 							{userEmail && (
-								<span className="hidden sm:block text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate max-w-[180px]">
+								<span className="hidden sm:block text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate max-w-44 bg-zinc-100 dark:bg-zinc-800/60 px-3 py-1.5 rounded-full">
 									{userEmail}
 								</span>
 							)}
 
-							{/* Dashboard link if not already there */}
 							{!pathname?.startsWith("/dashboard") && (
 								<Button
 									variant="ghost"
@@ -109,7 +103,7 @@ export default function Navbar() {
 								<Button
 									size="sm"
 									onClick={() => router.push("/signup")}
-									className="bg-indigo-600 hover:bg-indigo-700 text-white"
+									className="bg-violet-600 hover:bg-violet-700 text-white"
 								>
 									Get Started
 								</Button>

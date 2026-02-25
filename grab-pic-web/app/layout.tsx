@@ -14,8 +14,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "GrabPic — AI Photo Sharing",
-	description: "Share event photos with AI-powered face recognition.",
+	title: {
+		default: "GrabPic - Photo Sharing for Events",
+		template: "%s | GrabPic",
+	},
+	description:
+		"Upload event photos, share one link, and let each guest take a selfie to find the photos they're in. No tagging, no scrolling.",
+	keywords: [
+		"event photos",
+		"AI photo sharing",
+		"face recognition",
+		"wedding photos",
+		"photo sharing app",
+		"GrabPic",
+	],
+	openGraph: {
+		title: "GrabPic - Photo Sharing for Events",
+		description:
+			"Upload event photos, share one link, and each guest finds exactly the photos they're in.",
+		type: "website",
+		siteName: "GrabPic",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "GrabPic - Photo Sharing for Events",
+		description:
+			"Upload event photos, share one link, and each guest finds exactly the photos they're in.",
+	},
+	robots: {
+		index: true,
+		follow: true,
+	},
 };
 
 export default function RootLayout({

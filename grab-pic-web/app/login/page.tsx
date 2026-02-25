@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { useRedirectIfAuth } from "@/lib/useRequireAuth";
 import Link from "next/link";
-import { Camera, LogIn, Loader2 } from "lucide-react";
+import { LogIn, Loader2 } from "lucide-react";
+import GrabPicLogo from "@/components/GrabPicLogo";
 
-export default function LoginPage() {
+function LoginContent() {
 	const { isLoading: isAuthChecking, isAuthenticated } = useRedirectIfAuth();
+	const searchParams = useSearchParams();
+	const redirectTo = searchParams.get("redirect") || "/dashboard";
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -33,7 +37,7 @@ export default function LoginPage() {
 			setMessage({ text: error.message, type: "error" });
 		} else {
 			setMessage({ text: "Success! Redirecting...", type: "success" });
-			window.location.href = "/dashboard";
+			window.location.href = redirectTo;
 		}
 		setLoading(false);
 	};
@@ -42,7 +46,7 @@ export default function LoginPage() {
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider,
 			options: {
-				redirectTo: `${window.location.origin}/dashboard`,
+				redirectTo: `${window.location.origin}${redirectTo}`,
 			},
 		});
 		if (error) {
@@ -57,7 +61,7 @@ export default function LoginPage() {
 	if (isAuthChecking || isAuthenticated) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-				<Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+				<Loader2 className="w-10 h-10 animate-spin text-violet-600" />
 			</div>
 		);
 	}
@@ -66,14 +70,9 @@ export default function LoginPage() {
 		<div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">
 			<div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800">
 				{/* Branding Section */}
-				<div className="flex flex-col items-center text-center space-y-2">
-					<div className="bg-zinc-900 dark:bg-zinc-100 p-3 rounded-xl shadow-inner">
-						<Camera className="w-8 h-8 text-white dark:text-zinc-900" />
-					</div>
-					<h1 className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-zinc-50">
-						GrabPic
-					</h1>
-					<p className="text-zinc-500 dark:text-zinc-400 max-w-70">
+				<div className="flex flex-col items-center text-center space-y-3">
+					<GrabPicLogo size="md" />
+					<p className="text-zinc-500 dark:text-zinc-400 max-w-72 text-sm">
 						Welcome back! Sign in to manage your albums and share memories.
 					</p>
 				</div>
@@ -83,7 +82,7 @@ export default function LoginPage() {
 					<Button
 						variant="outline"
 						onClick={() => handleOAuth("google")}
-						className="rounded-lg border-zinc-200"
+						className="rounded-xl border-zinc-200"
 					>
 						<svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
 							<path
@@ -108,7 +107,7 @@ export default function LoginPage() {
 					<Button
 						variant="outline"
 						onClick={() => handleOAuth("github")}
-						className="rounded-lg border-zinc-200"
+						className="rounded-xl border-zinc-200"
 					>
 						<svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
 							<path
@@ -142,7 +141,7 @@ export default function LoginPage() {
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
 							required
-							className="rounded-lg"
+							className="rounded-xl"
 						/>
 					</div>
 					<div className="space-y-2">
@@ -161,13 +160,13 @@ export default function LoginPage() {
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
 							required
-							className="rounded-lg"
+							className="rounded-xl"
 						/>
 					</div>
 
 					{message && (
 						<div
-							className={`text-sm p-3 rounded-lg border ${message.type === "error" ? "bg-red-50 text-red-600 border-red-200" : "bg-green-50 text-green-600 border-green-200"}`}
+							className={`text-sm p-3 rounded-xl border ${message.type === "error" ? "bg-red-50 text-red-600 border-red-200" : "bg-green-50 text-green-600 border-green-200"}`}
 						>
 							{message.text}
 						</div>
@@ -175,7 +174,7 @@ export default function LoginPage() {
 
 					<Button
 						type="submit"
-						className="w-full h-11 rounded-lg font-semibold flex items-center justify-center gap-2"
+						className="w-full h-11 rounded-xl font-semibold flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white"
 						disabled={loading}
 					>
 						{loading ? (
@@ -199,5 +198,19 @@ export default function LoginPage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function LoginPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+					<Loader2 className="w-10 h-10 animate-spin text-violet-600" />
+				</div>
+			}
+		>
+			<LoginContent />
+		</Suspense>
 	);
 }

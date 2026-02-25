@@ -298,7 +298,7 @@ export default function AlbumViewPage() {
 	if (isAuthLoading || !isAuthenticated || isLoading) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-				<Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+				<Loader2 className="w-10 h-10 animate-spin text-violet-600" />
 			</div>
 		);
 	}
@@ -307,36 +307,83 @@ export default function AlbumViewPage() {
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">
 			<div className="max-w-7xl mx-auto space-y-8">
 				{/* Header Controls */}
-				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-					<div>
-						<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-							Album Gallery
-						</h1>
-						<p className="text-zinc-500 mt-1">
-							You are viewing as the Host. You can see all {photos.length}{" "}
-							photos.
-						</p>
+				<div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+					{/* Top row: title + normal buttons */}
+					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6">
+						<div>
+							<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+								Album Gallery
+							</h1>
+							<p className="text-zinc-500 mt-1">
+								You are viewing as the Host. You can see all {photos.length}{" "}
+								photos.
+							</p>
+						</div>
+
+						{!isSelectionMode && (
+							<div className="flex gap-2 w-full sm:w-auto flex-wrap">
+								<Button
+									onClick={() => setIsSelectionMode(true)}
+									variant="outline"
+									disabled={photos.length === 0}
+								>
+									<CheckSquare className="w-4 h-4 mr-2" /> Select
+								</Button>
+								<Button
+									onClick={() => router.push(`/dashboard/albums/${albumId}`)}
+									variant="outline"
+								>
+									<UploadCloud className="w-4 h-4 mr-2" /> Add More
+								</Button>
+								<Button
+									onClick={handleShareClick}
+									className="bg-violet-600 hover:bg-violet-700 text-white"
+								>
+									<Share2 className="w-4 h-4 mr-2" /> Share
+								</Button>
+								<Button
+									onClick={handleDeleteAlbum}
+									variant="outline"
+									className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 px-3"
+									title="Delete Entire Album"
+								>
+									<Trash2 className="w-4 h-4" />
+								</Button>
+							</div>
+						)}
 					</div>
 
-					<div className="flex gap-2 w-full sm:w-auto flex-wrap">
-						{isSelectionMode ? (
-							<>
-								<span className="flex items-center text-sm font-bold text-zinc-600 dark:text-zinc-300 mr-2">
-									{selectedPhotoIds.length} Selected
-								</span>
-
+					{/* Selection toolbar — separate bar that appears below, no cramming */}
+					{isSelectionMode && (
+						<div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 px-6 py-4 space-y-3">
+							{/* Row 1: Selection info + select/deselect */}
+							<div className="flex items-center justify-between flex-wrap gap-2">
+								<div className="flex items-center gap-3">
+									<span className="text-sm font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900 px-3 py-1 rounded-full">
+										{selectedPhotoIds.length} selected
+									</span>
+									<Button onClick={handleSelectAll} variant="outline" size="sm">
+										<SquareCheckBig className="w-4 h-4 mr-2" />
+										{selectedPhotoIds.length === photos.length
+											? "Deselect All"
+											: "Select All"}
+									</Button>
+								</div>
 								<Button
-									onClick={handleSelectAll}
-									variant="outline"
+									onClick={() => {
+										setIsSelectionMode(false);
+										setSelectedPhotoIds([]);
+									}}
+									variant="ghost"
 									size="sm"
-									className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+									className="text-zinc-500 hover:text-zinc-700"
 								>
-									<SquareCheckBig className="w-4 h-4 mr-2" />
-									{selectedPhotoIds.length === photos.length
-										? "Deselect All"
-										: "Select All"}
+									<X className="w-4 h-4 mr-1.5" /> Cancel
 								</Button>
+							</div>
 
+							{/* Row 2: Actions — grouped and spaced */}
+							<div className="flex flex-wrap gap-2">
 								<Button
 									onClick={handleDownloadSelectedZip}
 									variant="outline"
@@ -351,7 +398,6 @@ export default function AlbumViewPage() {
 									)}
 									{isDownloadingZip ? "Zipping..." : "Download Zip"}
 								</Button>
-
 								<Button
 									onClick={() => handleTogglePrivacySelected(true)}
 									variant="outline"
@@ -370,7 +416,6 @@ export default function AlbumViewPage() {
 								>
 									<Lock className="w-4 h-4 mr-2" /> Make Private
 								</Button>
-
 								<Button
 									onClick={handleDeleteSelected}
 									variant="destructive"
@@ -380,50 +425,9 @@ export default function AlbumViewPage() {
 								>
 									<Trash2 className="w-4 h-4 mr-2" /> Delete
 								</Button>
-								<Button
-									onClick={() => {
-										setIsSelectionMode(false);
-										setSelectedPhotoIds([]);
-									}}
-									variant="outline"
-									size="sm"
-								>
-									Cancel
-								</Button>
-							</>
-						) : (
-							<>
-								<Button
-									onClick={() => setIsSelectionMode(true)}
-									variant="outline"
-									disabled={photos.length === 0}
-								>
-									<CheckSquare className="w-4 h-4 mr-2" /> Select
-								</Button>
-								<Button
-									onClick={() => router.push(`/dashboard/albums/${albumId}`)}
-									variant="outline"
-								>
-									<UploadCloud className="w-4 h-4 mr-2" /> Add More
-								</Button>
-								{/* Share button now triggers the modal */}
-								<Button
-									onClick={handleShareClick}
-									className="bg-indigo-600 hover:bg-indigo-700 text-white"
-								>
-									<Share2 className="w-4 h-4 mr-2" /> Share
-								</Button>
-								<Button
-									onClick={handleDeleteAlbum}
-									variant="outline"
-									className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 px-3"
-									title="Delete Entire Album"
-								>
-									<Trash2 className="w-4 h-4" />
-								</Button>
-							</>
-						)}
-					</div>
+							</div>
+						</div>
+					)}
 				</div>
 
 				{/* Photo Grid */}
@@ -446,7 +450,7 @@ export default function AlbumViewPage() {
 									}
 								}}
 								className={`group relative aspect-square bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden shadow-sm transition-all cursor-pointer
-                                    ${selectedPhotoIds.includes(photo.id) ? "ring-4 ring-indigo-500 scale-[0.98]" : "border border-zinc-200 dark:border-zinc-700 hover:border-indigo-400"}`}
+                                    ${selectedPhotoIds.includes(photo.id) ? "ring-4 ring-violet-500 scale-[0.98]" : "border border-zinc-200 dark:border-zinc-700 hover:border-violet-400"}`}
 							>
 								<Image
 									src={photo.viewUrl}
@@ -460,7 +464,7 @@ export default function AlbumViewPage() {
 									<div className="absolute top-2 right-2 z-10">
 										<div
 											className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shadow-md
-                                            ${selectedPhotoIds.includes(photo.id) ? "bg-indigo-600 border-indigo-600" : "bg-black/30 border-white/80 hover:border-white"}`}
+                                            ${selectedPhotoIds.includes(photo.id) ? "bg-violet-600 border-violet-600" : "bg-black/30 border-white/80 hover:border-white"}`}
 										>
 											{selectedPhotoIds.includes(photo.id) && (
 												<Check className="w-4 h-4 text-white" />
@@ -505,7 +509,7 @@ export default function AlbumViewPage() {
 														setShowBoxes(true);
 													}
 												}}
-												className="flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-lg border border-indigo-400"
+												className="flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-bold bg-violet-600 text-white hover:bg-violet-700 transition-colors shadow-lg border border-violet-400"
 											>
 												<UserSearch className="w-3 h-3" />
 												Scanned ({photo.faceCount || 0}{" "}
@@ -532,8 +536,8 @@ export default function AlbumViewPage() {
 						</button>
 
 						<div className="text-center space-y-4 mb-6 mt-2">
-							<div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto">
-								<Share2 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+							<div className="w-12 h-12 bg-violet-100 dark:bg-violet-900 rounded-full flex items-center justify-center mx-auto">
+								<Share2 className="w-6 h-6 text-violet-600 dark:text-violet-400" />
 							</div>
 							<h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
 								Share with Guests
@@ -544,14 +548,14 @@ export default function AlbumViewPage() {
 							</p>
 						</div>
 
-						<div className="flex items-center space-x-2 bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700">
+						<div className="flex items-center space-x-2 bg-zinc-100 dark:bg-zinc-800 p-2 rounded-xl border border-zinc-200 dark:border-zinc-700">
 							<div className="flex-1 truncate text-sm text-zinc-600 dark:text-zinc-300 px-2 font-mono">
 								{`${window.location.origin}/albums/${albumId}/guest`}
 							</div>
 							<Button
 								onClick={handleCopyLink}
 								size="sm"
-								className={`shrink-0 transition-all ${isCopied ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
+								className={`shrink-0 transition-all ${isCopied ? "bg-emerald-600 hover:bg-emerald-700" : "bg-violet-600 hover:bg-violet-700"}`}
 							>
 								{isCopied ? (
 									<Check className="w-4 h-4 mr-1.5" />
@@ -568,7 +572,7 @@ export default function AlbumViewPage() {
 			{/* --- INSPECTION MODAL --- */}
 			{selectedPhoto && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-					<div className="relative max-w-5xl w-full bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col max-h-[90vh]">
+					<div className="relative max-w-5xl w-full bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col max-h-[90vh]">
 						<div className="flex justify-between items-center p-4 sm:p-6 border-b border-zinc-800">
 							<div>
 								<h3 className="text-white font-bold text-lg">
@@ -613,7 +617,7 @@ export default function AlbumViewPage() {
 									onClick={() => setShowBoxes(!showBoxes)}
 									variant="secondary"
 									size="sm"
-									className={`border-zinc-700 transition-colors ${showBoxes ? "bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white"}`}
+									className={`border-zinc-700 transition-colors ${showBoxes ? "bg-violet-950 text-violet-400 hover:bg-violet-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white"}`}
 									title={showBoxes ? "Hide Face Scans" : "Show Face Scans"}
 								>
 									{showBoxes ? (
@@ -630,7 +634,7 @@ export default function AlbumViewPage() {
 									onClick={handleDownload}
 									variant="secondary"
 									size="sm"
-									className="bg-zinc-800 text-zinc-300 hover:bg-indigo-600 hover:text-white border-zinc-700 hover:border-indigo-500"
+									className="bg-zinc-800 text-zinc-300 hover:bg-violet-600 hover:text-white border-zinc-700 hover:border-violet-500"
 									title="Download Original Photo"
 								>
 									<Download className="w-4 h-4" />
@@ -680,7 +684,7 @@ export default function AlbumViewPage() {
 										return (
 											<div
 												key={idx}
-												className="absolute border-2 border-indigo-400 bg-indigo-500/10 rounded-lg shadow-[0_0_15px_rgba(129,140,248,0.5)] transition-all hover:bg-indigo-500/30"
+												className="absolute border-2 border-violet-400 bg-violet-500/10 rounded-lg shadow-[0_0_15px_rgba(139,92,246,0.4)] transition-all hover:bg-violet-500/30"
 												style={{
 													left: `${(box.x / imageDims.width) * 100}%`,
 													top: `${(box.y / imageDims.height) * 100}%`,
@@ -688,7 +692,7 @@ export default function AlbumViewPage() {
 													height: `${(box.h / imageDims.height) * 100}%`,
 												}}
 											>
-												<span className="absolute -top-6 left-0 bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase whitespace-nowrap">
+												<span className="absolute -top-6 left-0 bg-violet-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase whitespace-nowrap">
 													ID: {idx + 1}
 												</span>
 											</div>

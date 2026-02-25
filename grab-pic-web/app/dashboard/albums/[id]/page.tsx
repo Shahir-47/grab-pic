@@ -41,7 +41,7 @@ export default function AlbumUploadPage() {
 	if (isAuthLoading || !isAuthenticated) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-				<Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+				<Loader2 className="w-10 h-10 animate-spin text-violet-600" />
 			</div>
 		);
 	}
@@ -180,9 +180,9 @@ export default function AlbumUploadPage() {
 						Add Photos to Album
 					</h1>
 
-					<div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-2xl p-6 flex gap-4 items-start">
-						<Info className="w-6 h-6 text-indigo-600 mt-1 shrink-0" />
-						<div className="space-y-2 text-sm text-indigo-900 dark:text-indigo-200">
+					<div className="bg-violet-50 dark:bg-violet-950 border border-violet-100 dark:border-violet-900 rounded-2xl p-6 flex gap-4 items-start">
+						<Info className="w-6 h-6 text-violet-600 mt-1 shrink-0" />
+						<div className="space-y-2 text-sm text-violet-900 dark:text-violet-200">
 							<h3 className="font-bold text-base">How Album Privacy Works</h3>
 							<p>
 								For your guests&apos; privacy, all uploaded photos are{" "}
@@ -206,7 +206,7 @@ export default function AlbumUploadPage() {
 				</div>
 
 				{/* Toolbar */}
-				<div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm gap-4">
+				<div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm gap-4">
 					<div className="flex gap-2 w-full sm:w-auto">
 						<input
 							type="file"
@@ -243,7 +243,7 @@ export default function AlbumUploadPage() {
 					<Button
 						onClick={handleUploadToS3}
 						disabled={photos.length === 0 || isUploading}
-						className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 shadow-lg shadow-indigo-500/25 transition-all"
+						className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-8 shadow-md transition-all"
 					>
 						{isUploading
 							? "Uploading to AWS S3..."
@@ -253,7 +253,7 @@ export default function AlbumUploadPage() {
 
 				{/* Empty State */}
 				{photos.length === 0 && (
-					<div className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-3xl p-20 flex flex-col items-center justify-center text-center bg-white/50 dark:bg-zinc-900/50">
+					<div className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-20 flex flex-col items-center justify-center text-center bg-white dark:bg-zinc-900">
 						<ImageIcon className="w-12 h-12 text-zinc-300 mb-4" />
 						<h3 className="text-xl font-semibold text-zinc-700 dark:text-zinc-300">
 							No photos selected
@@ -283,7 +283,7 @@ export default function AlbumUploadPage() {
 							{/* Status Overlays */}
 							{photo.status === "uploading" && (
 								<div className="absolute inset-0 flex items-center justify-center bg-zinc-900/20 backdrop-blur-[2px]">
-									<div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+									<div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
 								</div>
 							)}
 							{photo.status === "success" && (

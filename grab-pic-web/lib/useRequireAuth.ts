@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 /**
  * Hook that guards a page behind authentication.
- * Redirects unauthenticated users to /login.
- * Returns { isLoading, isAuthenticated } so the page can show a loading spinner.
+ * Redirects unauthenticated users to /login?redirect=<current_path>
+ * so they return to the right page after signing in.
  */
 export function useRequireAuth() {
 	const router = useRouter();
+	const pathname = usePathname();
 	const [isLoading, setIsLoading] = useState(true);
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -21,14 +22,18 @@ export function useRequireAuth() {
 			} = await supabase.auth.getSession();
 
 			if (!session) {
-				router.replace("/login");
+				const redirectUrl =
+					pathname && pathname !== "/"
+						? `/login?redirect=${encodeURIComponent(pathname)}`
+						: "/login";
+				router.replace(redirectUrl);
 			} else {
 				setIsAuthenticated(true);
 			}
 			setIsLoading(false);
 		};
 		check();
-	}, [router]);
+	}, [router, pathname]);
 
 	return { isLoading, isAuthenticated };
 }

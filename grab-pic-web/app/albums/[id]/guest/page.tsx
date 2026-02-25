@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-	Camera,
+	ScanFace,
 	Upload,
 	Loader2,
 	Image as ImageIcon,
@@ -254,7 +254,7 @@ export default function GuestWelcomePage() {
 	if (isLoading) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-				<Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+				<Loader2 className="w-10 h-10 animate-spin text-violet-600" />
 			</div>
 		);
 	}
@@ -276,30 +276,30 @@ export default function GuestWelcomePage() {
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row">
 			{/* LEFT SIDEBAR: The Scanner */}
-			<div className="w-full lg:w-112.5 shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 flex flex-col items-center justify-center p-8 lg:p-10 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+			<div className="w-full lg:w-112.5 shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col items-center justify-center p-8 lg:p-10 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
 				<div className="w-full max-w-sm space-y-8 text-center">
 					<div>
-						<div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-							<Camera className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+						<div className="w-16 h-16 bg-violet-100 dark:bg-violet-900 rounded-xl flex items-center justify-center mx-auto mb-4">
+							<ScanFace className="w-8 h-8 text-violet-600 dark:text-violet-400" />
 						</div>
 						<h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
 							{albumTitle}
 						</h1>
 						<p className="text-zinc-500 mt-3 text-sm leading-relaxed">
-							Welcome! You can browse the public gallery, or use our AI to
-							instantly find all the hidden photos you are in.
+							Browse the public gallery below, or take a selfie to find the
+							photos you&apos;re in.
 						</p>
 					</div>
 
-					<div className="bg-zinc-50 dark:bg-zinc-900 rounded-3xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-6">
+					<div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-6">
 						<div className="flex items-center justify-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-300">
-							<UserSearch className="w-4 h-4 text-indigo-500" />
+							<UserSearch className="w-4 h-4 text-violet-500" />
 							AI Photo Finder
 						</div>
 
 						{isCameraOpen && !selfie ? (
 							<div className="space-y-4">
-								<div className="relative w-full aspect-square rounded-2xl overflow-hidden border-2 border-indigo-500/30 shadow-lg bg-black">
+								<div className="relative w-full aspect-square rounded-2xl overflow-hidden border-2 border-violet-300 dark:border-violet-700 shadow-lg bg-black">
 									<video
 										ref={videoRef}
 										autoPlay
@@ -318,7 +318,7 @@ export default function GuestWelcomePage() {
 									</Button>
 									<Button
 										onClick={takeDesktopPhoto}
-										className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+										className="flex-1 bg-violet-600 hover:bg-violet-700"
 									>
 										Snap Photo
 									</Button>
@@ -326,7 +326,7 @@ export default function GuestWelcomePage() {
 							</div>
 						) : selfie ? (
 							<div className="space-y-4">
-								<div className="relative w-40 h-40 mx-auto rounded-full overflow-hidden border-4 border-indigo-100 dark:border-indigo-900 shadow-xl ring-4 ring-white dark:ring-zinc-900">
+								<div className="relative w-40 h-40 mx-auto rounded-full overflow-hidden border-4 border-violet-100 dark:border-violet-900 shadow-xl ring-4 ring-white dark:ring-zinc-900">
 									<img
 										src={URL.createObjectURL(selfie)}
 										alt="Your selfie"
@@ -362,8 +362,8 @@ export default function GuestWelcomePage() {
 									/>
 								)}
 
-								<div className="border-2 border-dashed border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-8 bg-white dark:bg-zinc-800/50 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20 transition-all flex flex-col items-center justify-center gap-3">
-									<div className="p-3 bg-indigo-100 dark:bg-indigo-900/40 rounded-full text-indigo-600 dark:text-indigo-400">
+								<div className="border-2 border-dashed border-violet-200 dark:border-violet-800 rounded-2xl p-8 bg-white dark:bg-zinc-800 group-hover:bg-violet-50 dark:group-hover:bg-violet-950 transition-all flex flex-col items-center justify-center gap-3">
+									<div className="p-3 bg-violet-100 dark:bg-violet-900 rounded-full text-violet-600 dark:text-violet-400">
 										{isMobile ? (
 											<Upload className="w-6 h-6" />
 										) : (
@@ -387,7 +387,7 @@ export default function GuestWelcomePage() {
 						<Button
 							onClick={handleSearch}
 							disabled={!selfie || isSearching}
-							className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-6 text-base font-bold shadow-xl shadow-indigo-500/20 transition-all"
+							className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6 text-base font-bold shadow-lg transition-all"
 						>
 							{isSearching ? (
 								<>
@@ -403,17 +403,17 @@ export default function GuestWelcomePage() {
 			</div>
 
 			{/* RIGHT MAIN AREA: Dynamic Galleries */}
-			<div className="flex-1 p-6 lg:p-12 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-950/50">
+			<div className="flex-1 p-6 lg:p-12 overflow-y-auto bg-zinc-50 dark:bg-zinc-950">
 				<div className="max-w-6xl mx-auto space-y-12">
 					{/* --- AI MATCHED PHOTOS --- */}
 					{matchedPhotos.length > 0 && (
 						<div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-							<div className="flex items-center gap-3 border-b border-indigo-100 dark:border-indigo-900/50 pb-4">
-								<UserSearch className="w-6 h-6 text-indigo-500" />
+							<div className="flex items-center gap-3 border-b border-violet-100 dark:border-violet-900 pb-4">
+								<UserSearch className="w-6 h-6 text-violet-500" />
 								<h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
 									Your Photos
 								</h2>
-								<span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm ml-auto">
+								<span className="bg-violet-100 dark:bg-violet-900 text-violet-600 dark:text-violet-400 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm ml-auto">
 									{matchedPhotos.length} Match
 									{matchedPhotos.length === 1 ? "" : "es"}
 								</span>
@@ -458,7 +458,7 @@ export default function GuestWelcomePage() {
 												guestSelectedIds.length === 0 || isDownloadingZip
 											}
 											onClick={() => handleGuestDownloadZip(matchedPhotos)}
-											className="bg-indigo-600 hover:bg-indigo-700 text-white"
+											className="bg-violet-600 hover:bg-violet-700 text-white"
 										>
 											{isDownloadingZip ? (
 												<Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
@@ -475,8 +475,8 @@ export default function GuestWelcomePage() {
 								{matchedPhotos.map((photo) => (
 									<div
 										key={photo.id}
-										className={`group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-md hover:shadow-2xl cursor-pointer transition-all duration-300
-											${isGuestSelecting && guestSelectedIds.includes(photo.id) ? "ring-4 ring-indigo-500 scale-[0.98]" : "border-4 border-indigo-500/30"}`}
+										className={`group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg cursor-pointer transition-all duration-300
+									${isGuestSelecting && guestSelectedIds.includes(photo.id) ? "ring-4 ring-violet-500 scale-[0.98]" : "border-2 border-violet-400 dark:border-violet-600"}`}
 										onClick={() => {
 											if (isGuestSelecting) {
 												toggleGuestSelect(photo.id);
@@ -496,7 +496,7 @@ export default function GuestWelcomePage() {
 											<div className="absolute top-3 right-3 z-10">
 												<div
 													className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shadow-md
-													${guestSelectedIds.includes(photo.id) ? "bg-indigo-600 border-indigo-600" : "bg-black/30 border-white/80"}`}
+													${guestSelectedIds.includes(photo.id) ? "bg-violet-600 border-violet-600" : "bg-black/30 border-white/80"}`}
 												>
 													{guestSelectedIds.includes(photo.id) && (
 														<Check className="w-4 h-4 text-white" />
@@ -554,7 +554,7 @@ export default function GuestWelcomePage() {
 						</div>
 
 						{publicPhotos.length === 0 ? (
-							<div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 border-dashed">
+							<div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 border-dashed">
 								<ImageIcon className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-4" />
 								<h3 className="text-lg font-bold text-zinc-700 dark:text-zinc-300 mb-1">
 									No public photos yet
@@ -569,7 +569,7 @@ export default function GuestWelcomePage() {
 								{publicPhotos.map((photo) => (
 									<div
 										key={photo.id}
-										className="group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-all duration-300"
+										className="group relative aspect-[4/5] bg-zinc-200 dark:bg-zinc-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-all duration-300"
 										onClick={() => openFullScreen(photo, publicPhotos)}
 									>
 										<img
@@ -623,7 +623,7 @@ export default function GuestWelcomePage() {
 					{/* Download button */}
 					<button
 						onClick={() => handleDownloadSingle(fullScreenPhoto)}
-						className="absolute top-5 right-20 p-3 bg-white/10 hover:bg-indigo-600 rounded-full text-white transition-colors z-10"
+						className="absolute top-5 right-20 p-3 bg-white/10 hover:bg-violet-600 rounded-full text-white transition-colors z-10"
 						title="Download this photo"
 					>
 						<Download className="w-5 h-5" />

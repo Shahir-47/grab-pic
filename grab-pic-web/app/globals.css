@@ -121,10 +121,27 @@
 		@apply border-border outline-ring/50;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-background text-foreground antialiased;
 	}
 }
 
 button {
 	cursor: pointer;
+}
+
+/* Smooth page transitions */
+main,
+section {
+	animation: fadeUp 0.3s ease-out;
+}
+
+@keyframes fadeUp {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
