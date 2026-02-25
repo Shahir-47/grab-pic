@@ -23,7 +23,7 @@ public class SharedAlbum {
     private String hostId;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Photo> photos;
 
     private LocalDateTime createdAt;

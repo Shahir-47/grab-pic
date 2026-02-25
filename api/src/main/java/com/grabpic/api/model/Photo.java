@@ -29,6 +29,6 @@ public class Photo {
     private boolean processed = false;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "photo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "photo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PhotoEmbedding> faces;
 }

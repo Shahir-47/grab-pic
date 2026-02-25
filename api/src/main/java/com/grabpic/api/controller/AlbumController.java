@@ -184,7 +184,7 @@ public class AlbumController {
                 return ResponseEntity.badRequest().body("Photo does not belong to this album.");
             }
 
-            photoRepository.deleteById(photoId);
+            photoRepository.delete(photoOpt.get());
             return ResponseEntity.ok().body("Photo removed successfully.");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to delete photo");
@@ -201,7 +201,7 @@ public class AlbumController {
                 return ResponseEntity.status(403).body("You do not own this album.");
             }
 
-            albumRepository.deleteById(albumId);
+            albumRepository.delete(albumOpt.get());
             return ResponseEntity.ok().body("Album deleted successfully.");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to delete album");
