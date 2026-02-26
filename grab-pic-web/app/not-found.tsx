@@ -9,7 +9,7 @@ export default function NotFound() {
 	const router = useRouter();
 
 	return (
-		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6">
+		<main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6">
 			<div className="max-w-md w-full text-center space-y-8">
 				{/* Big 404 */}
 				<div className="space-y-2">
@@ -49,6 +49,6 @@ export default function NotFound() {
 					<GrabPicLogo size="sm" className="justify-center opacity-40" />
 				</div>
 			</div>
-		</div>
+		</main>
 	);
 }

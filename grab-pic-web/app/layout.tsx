@@ -14,38 +14,61 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
+const SITE_URL = "https://grab-pic.vercel.app";
+
 export const metadata: Metadata = {
+	metadataBase: new URL(SITE_URL),
 	title: {
-		default: "GrabPic - Photo Sharing for Events",
+		default: "GrabPic — AI Photo Sharing for Events",
 		template: "%s | GrabPic",
 	},
 	description:
-		"Upload event photos, share one link, and let each guest take a selfie to find the photos they're in. No tagging, no scrolling.",
+		"Upload event photos, share one link, and let each guest take a selfie to instantly find every photo they appear in. AI-powered facial recognition — no tagging, no scrolling.",
 	keywords: [
 		"event photos",
 		"AI photo sharing",
-		"face recognition",
-		"wedding photos",
+		"facial recognition photo app",
+		"wedding photo sharing",
 		"photo sharing app",
+		"find my photos",
+		"selfie photo finder",
+		"event photography",
 		"GrabPic",
+		"face recognition",
+		"bulk photo download",
+		"guest photo sharing",
 	],
 	openGraph: {
-		title: "GrabPic - Photo Sharing for Events",
+		title: "GrabPic — AI Photo Sharing for Events",
 		description:
-			"Upload event photos, share one link, and each guest finds exactly the photos they're in.",
+			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie.",
 		type: "website",
 		siteName: "GrabPic",
+		url: SITE_URL,
+		locale: "en_US",
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "GrabPic - Photo Sharing for Events",
+		title: "GrabPic — AI Photo Sharing for Events",
 		description:
-			"Upload event photos, share one link, and each guest finds exactly the photos they're in.",
+			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie.",
+		creator: "@grabpic",
 	},
 	robots: {
 		index: true,
 		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			"max-video-preview": -1,
+			"max-image-preview": "large",
+			"max-snippet": -1,
+		},
 	},
+	alternates: {
+		canonical: SITE_URL,
+	},
+	category: "technology",
 };
 
 export default function RootLayout({
@@ -59,6 +82,35 @@ export default function RootLayout({
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})()`,
+					}}
+				/>
+				<script
+					type="application/ld+json"
+					dangerouslySetInnerHTML={{
+						__html: JSON.stringify({
+							"@context": "https://schema.org",
+							"@type": "WebApplication",
+							name: "GrabPic",
+							url: "https://grab-pic.vercel.app",
+							description:
+								"AI-powered event photo sharing with facial recognition. Upload event photos, share one link, and each guest finds their photos with a selfie.",
+							applicationCategory: "PhotographyApplication",
+							operatingSystem: "Web",
+							offers: {
+								"@type": "Offer",
+								price: "0",
+								priceCurrency: "USD",
+							},
+							featureList: [
+								"AI facial recognition photo matching",
+								"Instant selfie-based photo search",
+								"Bulk ZIP photo downloads",
+								"Public and protected photo privacy modes",
+								"Built-in selfie camera",
+								"QR code album sharing",
+								"No guest account required",
+							],
+						}),
 					}}
 				/>
 			</head>
