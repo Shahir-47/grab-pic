@@ -193,6 +193,7 @@ export default function AlbumUploadPage() {
 					photos: successfulPhotos.map((p) => ({
 						storageUrl: p.actualS3Key,
 						isPublic: p.isPublic,
+						public: p.isPublic,
 					})),
 				};
 
@@ -209,28 +210,28 @@ export default function AlbumUploadPage() {
 						errorMsg ||
 							"Photos uploaded to cloud, but failed to save to album.",
 					);
-					} else {
-						console.log("Successfully saved to database!");
-						setPhotos([]);
-						didRedirectToAlbum = true;
-						router.push(`/dashboard/albums/${albumId}/view`);
-						return;
-					}
+				} else {
+					console.log("Successfully saved to database!");
+					setPhotos([]);
+					didRedirectToAlbum = true;
+					router.push(`/dashboard/albums/${albumId}/view`);
+					return;
 				}
-			} catch (error) {
-				console.error("Upload process failed:", error);
+			}
+		} catch (error) {
+			console.error("Upload process failed:", error);
 			const message =
 				error instanceof Error && error.message
 					? error.message
 					: "Something went wrong while uploading. Please try again.";
-				alert(message);
-			} finally {
-				if (turnstileWasUsed && !didRedirectToAlbum) {
-					resetTurnstile();
-				}
-				setIsUploading(false);
+			alert(message);
+		} finally {
+			if (turnstileWasUsed && !didRedirectToAlbum) {
+				resetTurnstile();
 			}
-		};
+			setIsUploading(false);
+		}
+	};
 
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">

@@ -221,6 +221,20 @@ export default function GuestWelcomePage() {
 		setIsSearching(true);
 		setMatchedPhotos([]);
 
+		const readErrorMessage = async (res: Response, fallback: string) => {
+			const raw = await res.text();
+			if (!raw) return fallback;
+			try {
+				const parsed = JSON.parse(raw) as { error?: unknown };
+				if (typeof parsed.error === "string" && parsed.error.trim()) {
+					return parsed.error;
+				}
+			} catch {
+				return raw.startsWith("<!DOCTYPE") ? fallback : raw;
+			}
+			return fallback;
+		};
+
 		try {
 			const formData = new FormData();
 			formData.append("file", selfie);
@@ -240,11 +254,21 @@ export default function GuestWelcomePage() {
 			}
 
 			if (!aiRes.ok) {
-				const errData = await aiRes.json();
-				throw new Error(errData.error || "Failed to analyze face");
+				const msg = await readErrorMessage(
+					aiRes,
+					"Face search service is unavailable. Please try again.",
+				);
+				throw new Error(msg);
 			}
 
-			const aiData = await aiRes.json();
+			let aiData: { matched_photo_ids?: string[] };
+			try {
+				aiData = await aiRes.json();
+			} catch {
+				throw new Error(
+					"Face search service returned an invalid response. Please try again.",
+				);
+			}
 			const photoIds = aiData.matched_photo_ids;
 
 			if (!photoIds || photoIds.length === 0) {
@@ -259,7 +283,13 @@ export default function GuestWelcomePage() {
 				body: JSON.stringify(photoIds),
 			});
 
-			if (!sbRes.ok) throw new Error("Failed to retrieve your photos");
+			if (!sbRes.ok) {
+				const msg = await readErrorMessage(
+					sbRes,
+					"Failed to retrieve your photos.",
+				);
+				throw new Error(msg);
+			}
 
 			const finalPhotos = await sbRes.json();
 			setMatchedPhotos(finalPhotos);

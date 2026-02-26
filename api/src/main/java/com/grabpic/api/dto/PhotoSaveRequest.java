@@ -1,5 +1,6 @@
 package com.grabpic.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.util.List;
 
@@ -10,6 +11,8 @@ public class PhotoSaveRequest {
     @Data
     public static class PhotoItem {
         private String storageUrl;
+
+        @JsonProperty("isPublic")
         private boolean isPublic;
     }
 }
