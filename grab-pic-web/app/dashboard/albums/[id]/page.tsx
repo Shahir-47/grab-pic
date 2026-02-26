@@ -307,6 +307,7 @@ export default function AlbumUploadPage() {
 								src={photo.previewUrl}
 								alt="Preview"
 								fill
+								unoptimized
 								className={`object-cover transition-all duration-300 ${photo.status === "uploading" ? "opacity-50 grayscale scale-105" : ""}`}
 							/>
 
