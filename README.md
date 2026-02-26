@@ -960,6 +960,8 @@ python api.py
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous/public key      |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Cloudflare Turnstile site key      |
 
+Use base URLs only for `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_AI_API_URL` (no `/api` suffix, no trailing slash).
+
 ### Backend (`api/application.properties` via env vars)
 
 | Variable                       | Description                                              |

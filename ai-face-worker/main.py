@@ -13,14 +13,12 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 DEEPFACE_TIMEOUT_SECS = 300
 
 class DeepFaceTimeout(Exception):
-    """Raised when DeepFace processing exceeds the allowed time."""
+    pass
 
 def _timeout_handler(signum, frame):
     raise DeepFaceTimeout("DeepFace processing timed out")
 
 def _validate_image_dimensions(path: str) -> bool:
-    """Open the image header to check pixel count without fully decoding.
-    Returns True if the image is safe, False if it's a decompression bomb."""
     try:
         with Image.open(path) as img:
             w, h = img.size

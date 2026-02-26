@@ -131,6 +131,11 @@ export default function AlbumUploadPage() {
 
 			if (!response.ok) {
 				const errorMsg = await response.text();
+				if (response.status === 405) {
+					throw new Error(
+						"Upload endpoint rejected the HTTP method (405). Check backend deployment and NEXT_PUBLIC_API_URL format.",
+					);
+				}
 				throw new Error(
 					errorMsg || "Unable to prepare your upload. Please try again.",
 				);
@@ -308,32 +313,34 @@ export default function AlbumUploadPage() {
 						</Button>
 					</div>
 
-					<Button
-						onClick={handleUploadToS3}
-						disabled={
-							photos.length === 0 ||
-							isUploading ||
-							(isTurnstileEnabled && !turnstileToken)
-						}
-						className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-8 shadow-md transition-all"
-					>
-						{isUploading
-							? "Uploading to AWS S3..."
-							: `Upload ${photos.length} Photos`}
-					</Button>
-				</div>
+					<div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
+						{isTurnstileEnabled && (
+							<div className="w-full sm:w-auto flex justify-center">
+								<Turnstile
+									key={turnstileWidgetKey}
+									siteKey={turnstileSiteKey!}
+									onSuccess={(token) => setTurnstileToken(token)}
+									onExpire={() => setTurnstileToken(null)}
+									onError={() => setTurnstileToken(null)}
+								/>
+							</div>
+						)}
 
-				{isTurnstileEnabled && (
-					<div className="flex justify-center">
-						<Turnstile
-							key={turnstileWidgetKey}
-							siteKey={turnstileSiteKey!}
-							onSuccess={(token) => setTurnstileToken(token)}
-							onExpire={() => setTurnstileToken(null)}
-							onError={() => setTurnstileToken(null)}
-						/>
+						<Button
+							onClick={handleUploadToS3}
+							disabled={
+								photos.length === 0 ||
+								isUploading ||
+								(isTurnstileEnabled && !turnstileToken)
+							}
+							className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-8 shadow-md transition-all"
+						>
+							{isUploading
+								? "Uploading to AWS S3..."
+								: `Upload ${photos.length} Photos`}
+						</Button>
 					</div>
-				)}
+				</div>
 
 				{photos.length === 0 && (
 					<div className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-20 flex flex-col items-center justify-center text-center bg-white dark:bg-zinc-900">

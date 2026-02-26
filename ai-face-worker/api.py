@@ -20,7 +20,7 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 DEEPFACE_TIMEOUT_SECS = 180
 
 class DeepFaceTimeout(Exception):
-    """Raised when DeepFace processing exceeds the allowed time."""
+    pass
 
 def _timeout_handler(signum, frame):
     raise DeepFaceTimeout("DeepFace processing timed out")
@@ -34,7 +34,6 @@ TURNSTILE_ALLOWED_HOSTNAMES = {
 }
 
 def _get_client_ip(request: Request) -> str:
-    """Extract real client IP from proxy headers, falling back to direct connection."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[0].strip()
@@ -103,7 +102,6 @@ def _ensure_vector_index():
 _ensure_vector_index()
 
 def _validate_image_bytes(content: bytes) -> bool:
-    """Verify the file is actually an image by checking magic bytes, not just the header."""
     if len(content) < 12:
         return False
     if content[:3] == b'\xff\xd8\xff':
