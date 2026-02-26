@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -21,6 +22,9 @@ public class SecurityConfig {
 
     @Value("${supabase.jwks.url}")
     private String jwksUrl;
+
+    @Value("${supabase.jwt.issuer}")
+    private String jwtIssuer;
 
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
@@ -49,9 +53,14 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri(jwksUrl)
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwksUrl)
                 .jwsAlgorithm(SignatureAlgorithm.ES256)
                 .build();
+
+        // Validate issuer claim — rejects JWTs from other Supabase projects
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwtIssuer));
+
+        return decoder;
     }
 
     // Centralized CORS configuration — origins loaded from application.properties
