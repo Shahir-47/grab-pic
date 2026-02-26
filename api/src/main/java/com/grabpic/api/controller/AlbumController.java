@@ -180,12 +180,12 @@ public class AlbumController {
 
         photoRepository.saveAll(photosToSave);
 
-        // add to queue
-        for (Photo photo : photosToSave) {
-            if (photo.getAccessMode() == AccessMode.PROTECTED) {
-                sqsService.sendPhotoForProcessing(photo.getId().toString(), photo.getStorageUrl());
-            }
-        }
+        // Batch-send protected photos to SQS for AI processing (up to 10 per API call)
+        List<SqsService.PhotoMessage> sqsMessages = photosToSave.stream()
+                .filter(p -> p.getAccessMode() == AccessMode.PROTECTED)
+                .map(p -> new SqsService.PhotoMessage(p.getId().toString(), p.getStorageUrl()))
+                .toList();
+        sqsService.sendPhotosForProcessingBatch(sqsMessages);
 
         return ResponseEntity.ok().body("Successfully saved " + photosToSave.size() + " photos.");
     }
