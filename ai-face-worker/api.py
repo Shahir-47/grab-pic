@@ -2,7 +2,7 @@ import os
 import re
 import signal
 import tempfile
-import psycopg2
+from psycopg2 import pool
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,26 +38,6 @@ limiter = Limiter(key_func=_get_client_ip)
 app = FastAPI()
 app.state.limiter = limiter
 
-# --- Ensure HNSW vector index exists on startup ---
-def _ensure_vector_index():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_photo_embeddings_hnsw
-            ON photo_embeddings
-            USING hnsw (embedding vector_cosine_ops)
-            WITH (m = 16, ef_construction = 64);
-        """)
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("[+] HNSW vector index verified/created on photo_embeddings.embedding")
-    except Exception as e:
-        print(f"[!] Could not create HNSW index (non-fatal): {e}")
-
-_ensure_vector_index()
-
 @app.exception_handler(RateLimitExceeded)
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
@@ -85,14 +65,37 @@ IMAGE_SIGNATURES = {
     b'RIFF': "image/webp",               # WebP (RIFF....WEBP)
 }
 
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST"),
-        database=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        port=os.getenv("DB_PORT")
-    )
+# --- Database Connection Pool ---
+db_pool = pool.SimpleConnectionPool(
+    minconn=1,
+    maxconn=3,
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    port=os.getenv("DB_PORT")
+)
+print("[+] Database connection pool initialized (1-3 connections)")
+
+# --- Ensure HNSW vector index exists on startup ---
+def _ensure_vector_index():
+    try:
+        conn = db_pool.getconn()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_photo_embeddings_hnsw
+            ON photo_embeddings
+            USING hnsw (embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 64);
+        """)
+        conn.commit()
+        cur.close()
+        db_pool.putconn(conn)
+        print("[+] HNSW vector index verified/created on photo_embeddings.embedding")
+    except Exception as e:
+        print(f"[!] Could not create HNSW index (non-fatal): {e}")
+
+_ensure_vector_index()
 
 def _validate_image_bytes(content: bytes) -> bool:
     """Verify the file is actually an image by checking magic bytes, not just the header."""
@@ -178,23 +181,24 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
         embedding_str = f"[{','.join(map(str, embedding))}]"
 
         # Perform the pgvector Cosine Distance Search in PostgreSQL
-        conn = get_db_connection()
-        cur = conn.cursor()
+        conn = db_pool.getconn()
+        try:
+            cur = conn.cursor()
 
-        query = """
-            SELECT DISTINCT p.id, pe.embedding <=> %s AS distance
-            FROM photo_embeddings pe
-            JOIN photos p ON p.id = pe.photo_id
-            WHERE p.album_id = %s
-              AND pe.embedding <=> %s <= 0.45
-            ORDER BY distance ASC
-            LIMIT 50;
-        """
-        cur.execute(query, (embedding_str, album_id, embedding_str))
-        results = cur.fetchall()
-        
-        cur.close()
-        conn.close()
+            query = """
+                SELECT DISTINCT p.id, pe.embedding <=> %s AS distance
+                FROM photo_embeddings pe
+                JOIN photos p ON p.id = pe.photo_id
+                WHERE p.album_id = %s
+                  AND pe.embedding <=> %s <= 0.45
+                ORDER BY distance ASC
+                LIMIT 50;
+            """
+            cur.execute(query, (embedding_str, album_id, embedding_str))
+            results = cur.fetchall()
+            cur.close()
+        finally:
+            db_pool.putconn(conn)
 
         # Extract just the UUIDs from the database rows
         photo_ids = [str(r[0]) for r in results]

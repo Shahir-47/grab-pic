@@ -2,7 +2,7 @@ import os
 import json
 import signal
 import boto3
-import psycopg2
+from psycopg2 import pool
 from deepface import DeepFace
 from dotenv import load_dotenv
 
@@ -31,15 +31,17 @@ s3 = boto3.client(
 QUEUE_URL = os.getenv("SQS_QUEUE_URL")
 BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 
-# --- Database Setup ---
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST"),
-        database=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        port=os.getenv("DB_PORT")
-    )
+# --- Database Connection Pool ---
+db_pool = pool.SimpleConnectionPool(
+    minconn=1,
+    maxconn=2,
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    port=os.getenv("DB_PORT")
+)
+print("[+] Database connection pool initialized (1-2 connections)")
 
 # --- Processing Logic ---
 def process_message(message):
@@ -50,17 +52,17 @@ def process_message(message):
     print(f"\n[+] Processing Photo ID: {photo_id}")
 
     # --- Check if the photo still exists in the DB ---
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM photos WHERE id = %s", (photo_id,))
-    if cur.fetchone() is None:
-        print(f"    -> Skipping: Photo {photo_id} no longer exists in database.")
+    conn = db_pool.getconn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM photos WHERE id = %s", (photo_id,))
+        if cur.fetchone() is None:
+            print(f"    -> Skipping: Photo {photo_id} no longer exists in database.")
+            cur.close()
+            return # Exit early so we don't try to download or insert
         cur.close()
-        conn.close()
-        return # Exit early so we don't try to download or insert
-    
-    cur.close()
-    conn.close()
+    finally:
+        db_pool.putconn(conn)
     
     # Download image from S3 to a temporary file
     local_path = f"temp_{photo_id}.jpg"
@@ -93,7 +95,7 @@ def process_message(message):
         print(f"    -> Found {len(valid_faces)} faces")
         
         # Save to PostgreSQL
-        conn = get_db_connection()
+        conn = db_pool.getconn()
         cur = conn.cursor()
         
         try:
@@ -118,7 +120,7 @@ def process_message(message):
             raise e
         finally:
             cur.close()
-            conn.close()
+            db_pool.putconn(conn)
     finally:
         # Clean up the downloaded file no matter what
         if os.path.exists(local_path):
