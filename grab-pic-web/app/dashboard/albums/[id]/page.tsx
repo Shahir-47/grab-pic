@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { Button } from "@/components/ui/button";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import {
@@ -34,10 +35,14 @@ export default function AlbumUploadPage() {
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const albumId = params?.id || "unknown-album";
+	const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+	const isTurnstileEnabled = Boolean(turnstileSiteKey);
 
 	const [photos, setPhotos] = useState<UploadPhoto[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
 	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+	const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	if (isAuthLoading || !isAuthenticated) {
@@ -89,24 +94,41 @@ export default function AlbumUploadPage() {
 		setPhotos((prev) => prev.filter((p) => p.id !== id));
 	};
 
+	const resetTurnstile = () => {
+		setTurnstileToken(null);
+		setTurnstileWidgetKey((prev) => prev + 1);
+	};
+
 	const handleUploadToS3 = async () => {
 		const pendingPhotos = photos.filter(
 			(p) => p.status === "idle" || p.status === "error",
 		);
 		if (pendingPhotos.length === 0) return;
+		if (isTurnstileEnabled && !turnstileToken) {
+			alert("Please complete the bot check before uploading.");
+			return;
+		}
 
 		setIsUploading(true);
 
 		try {
 			const fileSizes = pendingPhotos.map((p) => p.file.size);
-			const response = await apiFetch(
-				`/api/albums/${albumId}/upload-urls`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ fileSizes }),
-				},
-			);
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (turnstileToken) {
+				headers["X-Turnstile-Token"] = turnstileToken;
+			}
+
+			const response = await apiFetch(`/api/albums/${albumId}/upload-urls`, {
+				method: "POST",
+				headers,
+				body: JSON.stringify({ fileSizes }),
+			});
+			if (isTurnstileEnabled) {
+				resetTurnstile();
+			}
+
 			if (!response.ok) {
 				const errorMsg = await response.text();
 				throw new Error(
@@ -288,7 +310,11 @@ export default function AlbumUploadPage() {
 
 					<Button
 						onClick={handleUploadToS3}
-						disabled={photos.length === 0 || isUploading}
+						disabled={
+							photos.length === 0 ||
+							isUploading ||
+							(isTurnstileEnabled && !turnstileToken)
+						}
 						className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-8 shadow-md transition-all"
 					>
 						{isUploading
@@ -296,6 +322,18 @@ export default function AlbumUploadPage() {
 							: `Upload ${photos.length} Photos`}
 					</Button>
 				</div>
+
+				{isTurnstileEnabled && (
+					<div className="flex justify-center">
+						<Turnstile
+							key={turnstileWidgetKey}
+							siteKey={turnstileSiteKey!}
+							onSuccess={(token) => setTurnstileToken(token)}
+							onExpire={() => setTurnstileToken(null)}
+							onError={() => setTurnstileToken(null)}
+						/>
+					</div>
+				)}
 
 				{photos.length === 0 && (
 					<div className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-20 flex flex-col items-center justify-center text-center bg-white dark:bg-zinc-900">

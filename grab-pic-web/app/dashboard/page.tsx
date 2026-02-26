@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Turnstile } from "@marsidev/react-turnstile";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
@@ -28,7 +27,6 @@ export default function DashboardPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isCreating, setIsCreating] = useState(false);
 	const [newAlbumTitle, setNewAlbumTitle] = useState("");
-	const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
 	useEffect(() => {
 		fetchAlbums();
@@ -58,7 +56,6 @@ export default function DashboardPage() {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					"X-Turnstile-Token": turnstileToken || "",
 				},
 				body: JSON.stringify({ title: newAlbumTitle }),
 			});
@@ -119,27 +116,21 @@ export default function DashboardPage() {
 								type="text"
 								placeholder="e.g., Sarah's Wedding 2026"
 								className="w-full text-sm px-4 py-3 border border-violet-200 dark:border-violet-800 rounded-xl bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all dark:text-white"
-								value={newAlbumTitle}
-								onChange={(e) => setNewAlbumTitle(e.target.value)}
-								disabled={isCreating}
-							/>
-							<div className="flex justify-center">
-								<Turnstile
-									siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-									onSuccess={(token) => setTurnstileToken(token)}
-								/>
-							</div>
-							<Button
-								type="submit"
-								className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold py-5 rounded-xl"
-								disabled={isCreating || !newAlbumTitle || !turnstileToken}
-							>
-								{isCreating ? (
-									<Loader2 className="w-5 h-5 animate-spin" />
-								) : (
-									"Create & Upload Photos"
-								)}
-							</Button>
+							value={newAlbumTitle}
+							onChange={(e) => setNewAlbumTitle(e.target.value)}
+							disabled={isCreating}
+						/>
+						<Button
+							type="submit"
+							className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold py-5 rounded-xl"
+							disabled={isCreating || !newAlbumTitle}
+						>
+							{isCreating ? (
+								<Loader2 className="w-5 h-5 animate-spin" />
+							) : (
+								"Create & Upload Photos"
+							)}
+						</Button>
 						</form>
 					</div>
 

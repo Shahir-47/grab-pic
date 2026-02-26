@@ -2,6 +2,7 @@ import os
 import re
 import signal
 import tempfile
+import requests
 from PIL import Image
 from psycopg2 import pool
 from fastapi import FastAPI, UploadFile, File, Form, Request
@@ -25,6 +26,12 @@ def _timeout_handler(signum, frame):
     raise DeepFaceTimeout("DeepFace processing timed out")
 
 load_dotenv()
+TURNSTILE_SECRET = os.getenv("TURNSTILE_SECRET", "").strip()
+TURNSTILE_ALLOWED_HOSTNAMES = {
+    host.strip().lower()
+    for host in os.getenv("TURNSTILE_ALLOWED_HOSTNAMES", "").split(",")
+    if host.strip()
+}
 
 def _get_client_ip(request: Request) -> str:
     """Extract real client IP from proxy headers, falling back to direct connection."""
@@ -53,7 +60,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-Turnstile-Token"],
 )
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -107,12 +114,40 @@ def _validate_image_bytes(content: bytes) -> bool:
         return True
     return False
 
+def _is_human(turnstile_token: str | None, remote_ip: str | None = None) -> bool:
+    if not TURNSTILE_SECRET:
+        return True
+    if not turnstile_token:
+        return False
+    payload = {"secret": TURNSTILE_SECRET, "response": turnstile_token}
+    if remote_ip:
+        payload["remoteip"] = remote_ip
+    try:
+        response = requests.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data=payload,
+            timeout=5,
+        )
+        data = response.json()
+        if not bool(data.get("success")):
+            return False
+        if TURNSTILE_ALLOWED_HOSTNAMES:
+            hostname = str(data.get("hostname", "")).strip().lower()
+            return hostname in TURNSTILE_ALLOWED_HOSTNAMES
+        return True
+    except Exception:
+        return False
+
 
 @app.post("/search")
 @limiter.limit("5/minute")
 async def search_faces(request: Request, album_id: str = Form(...), file: UploadFile = File(...)):
     if not re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', album_id, re.I):
         return JSONResponse(content={"error": "Invalid album."}, status_code=400)
+
+    turnstile_token = request.headers.get("x-turnstile-token")
+    if not _is_human(turnstile_token, _get_client_ip(request)):
+        return JSONResponse(content={"error": "Bot check failed."}, status_code=403)
 
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         return JSONResponse(

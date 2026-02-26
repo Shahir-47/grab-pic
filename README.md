@@ -330,8 +330,8 @@ The `RateLimitFilter` also injects security headers on every response: `X-Conten
 
 **Bot protection** uses Cloudflare Turnstile on two sensitive flows:
 
-1. **Album creation** — Creating a new album requires a valid Turnstile token passed in the `X-Turnstile-Token` header. The backend verifies the token against Cloudflare's siteverify API before processing the request.
-2. **Guest search** — The "Find My Photos" button is gated behind the Turnstile widget on the client side. Guests must complete the challenge before the selfie search flow can begin.
+1. **Upload URL generation** — `POST /api/albums/{albumId}/upload-urls` requires a valid Turnstile token in the `X-Turnstile-Token` header. The backend verifies the token with Cloudflare (including client IP and optional hostname allowlist) before issuing any presigned S3 upload URLs.
+2. **Guest selfie search** — The "Find My Photos" flow uses Turnstile and sends the token to the AI search API (`/api/ai/search`). The FastAPI service verifies the token server-side (including client IP and optional hostname allowlist) before running DeepFace.
 
 **S3 lifecycle management:** On startup, the `S3StorageService` applies a lifecycle rule to the S3 bucket that auto-aborts incomplete multipart uploads after 1 day. It also configures S3 bucket CORS to allow `GET` and `PUT` from the frontend origin, so browsers can upload and view photos directly without a server-side proxy.
 
@@ -654,7 +654,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    L0["Cloudflare Turnstile<br>bot protection on album creation<br>and guest search"] --> L1["Supabase Auth<br>JWT issued per session"]
+    L0["Cloudflare Turnstile<br>bot protection on upload URL generation<br>and guest selfie search"] --> L1["Supabase Auth<br>JWT issued per session"]
     L1 --> L2["Spring Security<br>validates JWT signature + issuer"]
     L2 --> L3["Ownership check<br>jwt.sub == album.hostId"]
     L3 --> L4["Rate limiting<br>Redis token bucket per IP"]
@@ -680,7 +680,7 @@ flowchart TD
 - Decompression bomb protection: Pillow validates pixel count (25 MP limit) before DeepFace processes any image
 - S3 lifecycle rule auto-aborts abandoned multipart uploads after 1 day
 - S3 bucket CORS configured at startup to restrict `GET`/`PUT` to the frontend origin only
-- Cloudflare Turnstile on album creation (server-verified) and guest search (client-side gate) to block bots
+- Cloudflare Turnstile on upload URL generation (backend verified with optional hostname allowlist) and guest selfie search (AI API verified with optional hostname allowlist) to block bots on expensive endpoints
 - Guest selfies are never persisted to disk (temp file deleted in `finally` block)
 - CORS is restricted to the frontend origin via both Spring Security and S3 bucket policy
 
@@ -900,6 +900,8 @@ export CORS_ALLOWED_ORIGINS=http://localhost:3000
 export REDIS_URL=redis://localhost:6379
 # Optional: Turnstile bot protection (if blank, all requests are allowed — convenient for local dev)
 export TURNSTILE_SECRET=<your-turnstile-secret>
+# Optional but recommended in production: restrict accepted Turnstile hostnames
+export TURNSTILE_ALLOWED_HOSTNAMES=grab-pic.vercel.app,localhost
 
 # Optional: CloudFront CDN (omit for local dev — falls back to S3 presigned URLs)
 # export CLOUDFRONT_DOMAIN=<your-distribution>.cloudfront.net
@@ -929,6 +931,11 @@ DB_NAME=postgres
 DB_USER=postgres
 DB_PASSWORD=<supabase-db-password>
 DB_PORT=5432
+ALLOWED_ORIGINS=http://localhost:3000
+# Optional: enable server-side Turnstile verification for guest selfie search
+TURNSTILE_SECRET=<your-turnstile-secret>
+# Optional but recommended in production: restrict accepted Turnstile hostnames
+TURNSTILE_ALLOWED_HOSTNAMES=grab-pic.vercel.app,localhost
 EOF
 
 # Start the SQS worker
@@ -973,6 +980,7 @@ python api.py
 | `REDIS_URL`                    | Redis connection URL (default: redis://localhost:6379)    |
 | `REDIS_SSL`                    | Enable SSL for Redis connection (default: false)         |
 | `TURNSTILE_SECRET`             | Cloudflare Turnstile secret key for bot protection       |
+| `TURNSTILE_ALLOWED_HOSTNAMES`  | Optional comma-separated Turnstile hostname allowlist (recommended in prod) |
 | `CLOUDFRONT_DOMAIN`            | CloudFront distribution domain (optional)                |
 | `CLOUDFRONT_KEY_PAIR_ID`       | CloudFront key pair ID for signed URLs (optional)        |
 | `CLOUDFRONT_PRIVATE_KEY_STRING`| PEM private key string for CloudFront signing (optional) |
@@ -990,6 +998,8 @@ python api.py
 | `DB_PASSWORD`     | Database password                        |
 | `DB_PORT`         | Database port                            |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins for FastAPI |
+| `TURNSTILE_SECRET`| Cloudflare Turnstile secret key for guest search verification |
+| `TURNSTILE_ALLOWED_HOSTNAMES` | Optional comma-separated Turnstile hostname allowlist (recommended in prod) |
 
 ---
 

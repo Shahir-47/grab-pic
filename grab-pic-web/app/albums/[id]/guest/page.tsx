@@ -33,6 +33,8 @@ interface Photo {
 export default function GuestWelcomePage() {
 	const params = useParams<{ id: string }>();
 	const albumId = params?.id || "";
+	const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+	const isTurnstileEnabled = Boolean(turnstileSiteKey);
 
 	const [albumTitle, setAlbumTitle] = useState("");
 	const [publicPhotos, setPublicPhotos] = useState<Photo[]>([]);
@@ -51,6 +53,7 @@ export default function GuestWelcomePage() {
 	const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+	const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
 
 	const [isMobile, setIsMobile] = useState(true);
 	const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -203,8 +206,18 @@ export default function GuestWelcomePage() {
 		}
 	};
 
+	const resetTurnstile = () => {
+		setTurnstileToken(null);
+		setTurnstileWidgetKey((prev) => prev + 1);
+	};
+
 	const handleSearch = async () => {
 		if (!selfie) return;
+		if (isTurnstileEnabled && !turnstileToken) {
+			alert("Please complete the bot check before searching.");
+			return;
+		}
+
 		setIsSearching(true);
 		setMatchedPhotos([]);
 
@@ -212,11 +225,19 @@ export default function GuestWelcomePage() {
 			const formData = new FormData();
 			formData.append("file", selfie);
 			formData.append("album_id", albumId);
+			const headers: Record<string, string> = {};
+			if (turnstileToken) {
+				headers["X-Turnstile-Token"] = turnstileToken;
+			}
 
 			const aiRes = await fetch("/api/ai/search", {
 				method: "POST",
+				headers,
 				body: formData,
 			});
+			if (isTurnstileEnabled) {
+				resetTurnstile();
+			}
 
 			if (!aiRes.ok) {
 				const errData = await aiRes.json();
@@ -384,16 +405,21 @@ export default function GuestWelcomePage() {
 							</div>
 						)}
 
-						<div className="flex justify-center my-4">
-							<Turnstile
-								siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-								onSuccess={(token) => setTurnstileToken(token)}
-							/>
-						</div>
+						{isTurnstileEnabled && (
+							<div className="flex justify-center my-4">
+								<Turnstile
+									key={turnstileWidgetKey}
+									siteKey={turnstileSiteKey!}
+									onSuccess={(token) => setTurnstileToken(token)}
+									onExpire={() => setTurnstileToken(null)}
+									onError={() => setTurnstileToken(null)}
+								/>
+							</div>
+						)}
 
 						<Button
 							onClick={handleSearch}
-							disabled={!selfie || isSearching || !turnstileToken}
+							disabled={!selfie || isSearching || (isTurnstileEnabled && !turnstileToken)}
 							className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6 text-base font-bold shadow-lg transition-all"
 						>
 							{isSearching ? (

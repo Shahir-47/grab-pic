@@ -9,7 +9,7 @@ import com.grabpic.api.repository.SharedAlbumRepository;
 import com.grabpic.api.service.S3StorageService;
 import com.grabpic.api.service.SqsService;
 import com.grabpic.api.service.TurnstileService;
-import org.springframework.http.HttpStatus;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,12 +47,7 @@ public class AlbumController {
     @PostMapping
     public ResponseEntity<?> createAlbum(
             @RequestBody com.grabpic.api.dto.AlbumCreateRequest request,
-            @RequestHeader(value = "X-Turnstile-Token", required = false) String turnstileToken,
             @AuthenticationPrincipal Jwt jwt) {
-
-        if (!turnstileService.isHuman(turnstileToken)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bot activity detected.");
-        }
 
         SharedAlbum album = new SharedAlbum();
         album.setTitle(request.getTitle());
@@ -103,7 +98,13 @@ public class AlbumController {
     public ResponseEntity<?> getUploadUrls(
             @PathVariable UUID albumId,
             @RequestBody com.grabpic.api.dto.UploadUrlRequest request,
+            @RequestHeader(value = "X-Turnstile-Token", required = false) String turnstileToken,
+            HttpServletRequest httpRequest,
             @AuthenticationPrincipal Jwt jwt) {
+
+        if (!turnstileService.isHuman(turnstileToken, httpRequest.getRemoteAddr())) {
+            return ResponseEntity.status(403).body("Bot activity detected.");
+        }
 
         Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
         if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
