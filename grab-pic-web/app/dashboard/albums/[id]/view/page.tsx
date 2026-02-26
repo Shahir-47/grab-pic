@@ -49,7 +49,7 @@ export default function AlbumViewPage() {
 
 	const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 	const [imageDims, setImageDims] = useState({ width: 1, height: 1 });
-	const [showBoxes, setShowBoxes] = useState(false); // Default changed to false
+	const [showBoxes, setShowBoxes] = useState(false);
 
 	const [isSelectionMode, setIsSelectionMode] = useState(false);
 	const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
@@ -310,7 +310,6 @@ export default function AlbumViewPage() {
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">
 			<div className="max-w-7xl mx-auto space-y-6">
-				{/* Back link — standalone with proper spacing */}
 				<button
 					onClick={() => router.push("/dashboard")}
 					className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
@@ -319,9 +318,7 @@ export default function AlbumViewPage() {
 					Back to Dashboard
 				</button>
 
-				{/* Header Controls */}
 				<div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-					{/* Top row: title + action buttons */}
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6">
 						<div>
 							<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -366,12 +363,9 @@ export default function AlbumViewPage() {
 						)}
 					</div>
 
-					{/* Selection toolbar */}
 					{isSelectionMode && (
 						<div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 px-6 py-4">
-							{/* Single row on desktop, stacks cleanly on mobile */}
 							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-								{/* Left: count + select all */}
 								<div className="flex items-center gap-3">
 									<span className="text-sm font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900 px-3 py-1 rounded-full">
 										{selectedPhotoIds.length} selected
@@ -384,7 +378,6 @@ export default function AlbumViewPage() {
 									</Button>
 								</div>
 
-								{/* Center: action buttons */}
 								<div className="flex items-center gap-2 flex-wrap">
 									<Button
 										onClick={handleDownloadSelectedZip}
@@ -428,7 +421,6 @@ export default function AlbumViewPage() {
 									</Button>
 								</div>
 
-								{/* Right: cancel */}
 								<Button
 									onClick={() => {
 										setIsSelectionMode(false);
@@ -445,7 +437,6 @@ export default function AlbumViewPage() {
 					)}
 				</div>
 
-				{/* Photo Grid */}
 				{photos.length === 0 ? (
 					<div className="text-center py-20 text-zinc-500">
 						No photos found. Upload some to get started!
@@ -459,7 +450,6 @@ export default function AlbumViewPage() {
 									if (isSelectionMode) {
 										toggleSelection(photo.id);
 									} else {
-										// Clicking the generic image background opens it clean (no faces)
 										setSelectedPhoto(photo);
 										setShowBoxes(false);
 									}
@@ -515,7 +505,6 @@ export default function AlbumViewPage() {
 										photo.processed && (
 											<button
 												onClick={(e) => {
-													// Prevent the parent DIV click from firing
 													e.stopPropagation();
 													if (isSelectionMode) {
 														toggleSelection(photo.id);
@@ -539,7 +528,6 @@ export default function AlbumViewPage() {
 				)}
 			</div>
 
-			{/* --- SHARE MODAL --- */}
 			{isShareModalOpen && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
 					<div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 max-w-md w-full p-6 relative">
@@ -598,7 +586,6 @@ export default function AlbumViewPage() {
 				</div>
 			)}
 
-			{/* --- INSPECTION MODAL --- */}
 			{selectedPhoto && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
 					<div className="relative max-w-5xl w-full bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col max-h-[90vh]">

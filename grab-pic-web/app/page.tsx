@@ -45,7 +45,6 @@ export default function Home() {
 
 	return (
 		<main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
-			{/* ── HERO ── */}
 			<section aria-label="Hero" className="flex-1 flex flex-col items-center justify-center text-center px-6 pt-20 pb-16 space-y-10">
 				<GrabPicLogo size="xl" showText={false} />
 
@@ -107,7 +106,6 @@ export default function Home() {
 				</p>
 			</section>
 
-			{/* ── HOW IT WORKS ── */}
 			<section aria-label="How it works" className="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
 				<div className="max-w-5xl mx-auto px-6 py-20">
 					<div className="text-center mb-14">
@@ -164,7 +162,6 @@ export default function Home() {
 				</div>
 			</section>
 
-			{/* ── FEATURES ── */}
 			<section aria-label="Features" className="max-w-5xl mx-auto px-6 py-20">
 				<div className="text-center mb-14">
 					<p className="text-sm font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">
@@ -232,7 +229,6 @@ export default function Home() {
 				</div>
 			</section>
 
-			{/* ── USE CASES ── */}
 			<section aria-label="Use cases" className="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
 				<div className="max-w-4xl mx-auto px-6 py-20 text-center">
 					<p className="text-sm font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">
@@ -265,7 +261,6 @@ export default function Home() {
 				</div>
 			</section>
 
-			{/* ── FINAL CTA ── */}
 			<section aria-label="Call to action" className="max-w-3xl mx-auto px-6 py-20 text-center space-y-6">
 				<h2 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
 					{isLoggedIn
@@ -295,7 +290,6 @@ export default function Home() {
 				</Button>
 			</section>
 
-			{/* ── FOOTER ── */}
 			<footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 text-center text-xs text-zinc-400 dark:text-zinc-500 space-y-2">
 				<GrabPicLogo size="sm" className="justify-center" />
 				<p>© {new Date().getFullYear()} GrabPic. Photo sharing for events.</p>

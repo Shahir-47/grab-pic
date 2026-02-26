@@ -19,7 +19,6 @@ export default function OGImage() {
 					fontFamily: "sans-serif",
 				}}
 			>
-				{/* Logo */}
 				<div
 					style={{
 						display: "flex",
@@ -57,7 +56,6 @@ export default function OGImage() {
 					</svg>
 				</div>
 
-				{/* Title */}
 				<div
 					style={{
 						fontSize: 64,
@@ -70,7 +68,6 @@ export default function OGImage() {
 					GrabPic
 				</div>
 
-				{/* Subtitle */}
 				<div
 					style={{
 						fontSize: 28,
@@ -82,7 +79,6 @@ export default function OGImage() {
 					AI Photo Sharing for Events
 				</div>
 
-				{/* Description */}
 				<div
 					style={{
 						fontSize: 20,

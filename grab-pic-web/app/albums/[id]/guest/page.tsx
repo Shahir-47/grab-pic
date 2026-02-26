@@ -36,7 +36,7 @@ export default function GuestWelcomePage() {
 
 	const [albumTitle, setAlbumTitle] = useState("");
 	const [publicPhotos, setPublicPhotos] = useState<Photo[]>([]);
-	const [matchedPhotos, setMatchedPhotos] = useState<Photo[]>([]); // NEW: Holds AI matches
+	const [matchedPhotos, setMatchedPhotos] = useState<Photo[]>([]);
 
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -206,10 +206,9 @@ export default function GuestWelcomePage() {
 	const handleSearch = async () => {
 		if (!selfie) return;
 		setIsSearching(true);
-		setMatchedPhotos([]); // clear previous results
+		setMatchedPhotos([]);
 
 		try {
-			// Send selfie to Python Vector Search API via Next.js Proxy
 			const formData = new FormData();
 			formData.append("file", selfie);
 			formData.append("album_id", albumId);
@@ -233,7 +232,6 @@ export default function GuestWelcomePage() {
 				return;
 			}
 
-			// Fetch the Secure S3 URLs from Spring Boot for those exact IDs
 			const sbRes = await fetch(`/api/albums/${albumId}/guest/search-results`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -278,7 +276,6 @@ export default function GuestWelcomePage() {
 
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col lg:flex-row">
-			{/* LEFT SIDEBAR: The Scanner */}
 			<div className="w-full lg:w-112.5 shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col items-center justify-center p-8 lg:p-10 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
 				<div className="w-full max-w-sm space-y-8 text-center">
 					<div>
@@ -412,10 +409,8 @@ export default function GuestWelcomePage() {
 				</div>
 			</div>
 
-			{/* RIGHT MAIN AREA: Dynamic Galleries */}
 			<div className="flex-1 px-6 py-6 lg:px-12 lg:py-7 overflow-y-auto bg-zinc-50 dark:bg-zinc-950">
 				<div className="max-w-6xl mx-auto space-y-12">
-					{/* --- AI MATCHED PHOTOS --- */}
 					{matchedPhotos.length > 0 && (
 						<div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
 							<div className="flex items-center gap-3 border-b border-violet-100 dark:border-violet-900 pb-4">
@@ -429,7 +424,6 @@ export default function GuestWelcomePage() {
 								</span>
 							</div>
 
-							{/* Selection toolbar for matched photos */}
 							<div className="flex flex-wrap items-center gap-2">
 								<Button
 									variant={isGuestSelecting ? "secondary" : "outline"}
@@ -501,7 +495,6 @@ export default function GuestWelcomePage() {
 											className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
 										/>
 
-										{/* Selection indicator */}
 										{isGuestSelecting && (
 											<div className="absolute top-3 right-3 z-10">
 												<div
@@ -515,7 +508,6 @@ export default function GuestWelcomePage() {
 											</div>
 										)}
 
-										{/* Hover overlay with actions */}
 										{!isGuestSelecting && (
 											<div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
 												<div className="flex gap-2">
@@ -548,7 +540,6 @@ export default function GuestWelcomePage() {
 						</div>
 					)}
 
-					{/* --- PUBLIC ALBUM GALLERY --- */}
 					<div className="space-y-6">
 						<div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-7">
 							<div className="flex items-center gap-3">
@@ -619,10 +610,8 @@ export default function GuestWelcomePage() {
 				</div>
 			</div>
 
-			{/* --- FULLSCREEN PHOTO MODAL --- */}
 			{fullScreenPhoto && (
 				<div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200">
-					{/* Close button */}
 					<button
 						onClick={() => setFullScreenPhoto(null)}
 						className="absolute top-5 right-5 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-10"
@@ -630,7 +619,6 @@ export default function GuestWelcomePage() {
 						<X className="w-6 h-6" />
 					</button>
 
-					{/* Download button */}
 					<button
 						onClick={() => handleDownloadSingle(fullScreenPhoto)}
 						className="absolute top-5 right-20 p-3 bg-white/10 hover:bg-violet-600 rounded-full text-white transition-colors z-10"
@@ -639,7 +627,6 @@ export default function GuestWelcomePage() {
 						<Download className="w-5 h-5" />
 					</button>
 
-					{/* Previous arrow */}
 					{fullScreenList.findIndex((p) => p.id === fullScreenPhoto.id) > 0 && (
 						<button
 							onClick={() => navigateFullScreen("prev")}
@@ -649,7 +636,6 @@ export default function GuestWelcomePage() {
 						</button>
 					)}
 
-					{/* Next arrow */}
 					{fullScreenList.findIndex((p) => p.id === fullScreenPhoto.id) <
 						fullScreenList.length - 1 && (
 						<button
@@ -660,7 +646,6 @@ export default function GuestWelcomePage() {
 						</button>
 					)}
 
-					{/* Image */}
 					<div className="relative max-w-6xl w-full h-[85vh] flex items-center justify-center p-4">
 						<img
 							src={fullScreenPhoto.viewUrl}
@@ -669,7 +654,6 @@ export default function GuestWelcomePage() {
 						/>
 					</div>
 
-					{/* Counter */}
 					<div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/60 text-sm font-medium">
 						{fullScreenList.findIndex((p) => p.id === fullScreenPhoto.id) + 1} /{" "}
 						{fullScreenList.length}

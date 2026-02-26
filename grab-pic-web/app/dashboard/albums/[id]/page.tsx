@@ -48,9 +48,8 @@ export default function AlbumUploadPage() {
 		);
 	}
 
-	const MAX_PHOTO_SIZE = 10 * 1024 * 1024; // 10 MB
+	const MAX_PHOTO_SIZE = 10 * 1024 * 1024;
 
-	//  Load files into browser memory and create preview URLs
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (!e.target.files) return;
 
@@ -73,7 +72,6 @@ export default function AlbumUploadPage() {
 			}));
 
 		setPhotos((prev) => [...prev, ...newFiles]);
-		// Reset input so the same file can be selected again
 		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
 
@@ -205,7 +203,6 @@ export default function AlbumUploadPage() {
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">
 			<div className="max-w-6xl mx-auto space-y-6">
-				{/* Back link — standalone */}
 				<button
 					onClick={() => router.push("/dashboard")}
 					className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
@@ -214,7 +211,6 @@ export default function AlbumUploadPage() {
 					Back to Dashboard
 				</button>
 
-				{/* Header & Privacy Explanation */}
 				<div className="space-y-4">
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 						<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -256,7 +252,6 @@ export default function AlbumUploadPage() {
 					</div>
 				</div>
 
-				{/* Toolbar */}
 				<div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm gap-4">
 					<div className="flex gap-2 w-full sm:w-auto">
 						<input
@@ -302,7 +297,6 @@ export default function AlbumUploadPage() {
 					</Button>
 				</div>
 
-				{/* Empty State */}
 				{photos.length === 0 && (
 					<div className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-20 flex flex-col items-center justify-center text-center bg-white dark:bg-zinc-900">
 						<ImageIcon className="w-12 h-12 text-zinc-300 mb-4" />
@@ -316,14 +310,12 @@ export default function AlbumUploadPage() {
 					</div>
 				)}
 
-				{/* Photo Grid */}
 				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
 					{photos.map((photo) => (
 						<div
 							key={photo.id}
 							className="group relative aspect-square bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-sm"
 						>
-							{/* Image Preview */}
 							<Image
 								src={photo.previewUrl}
 								alt="Preview"
@@ -332,7 +324,6 @@ export default function AlbumUploadPage() {
 								className={`object-cover transition-all duration-300 ${photo.status === "uploading" ? "opacity-50 grayscale scale-105" : ""}`}
 							/>
 
-							{/* Status Overlays */}
 							{photo.status === "uploading" && (
 								<div className="absolute inset-0 flex items-center justify-center bg-zinc-900/20 backdrop-blur-[2px]">
 									<div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
@@ -349,7 +340,6 @@ export default function AlbumUploadPage() {
 								</div>
 							)}
 
-							{/* Hover Controls (Only visible when idle) */}
 							{photo.status === "idle" && (
 								<>
 									<div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -369,7 +359,6 @@ export default function AlbumUploadPage() {
 										</button>
 									</div>
 
-									{/* Privacy Toggle at bottom */}
 									<div className="absolute bottom-2 left-2 right-2">
 										<button
 											onClick={() => togglePrivacy(photo.id)}
@@ -398,7 +387,6 @@ export default function AlbumUploadPage() {
 				</div>
 			</div>
 
-			{/* Full Screen Image Modal */}
 			{fullScreenImage && (
 				<div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
 					<button
@@ -413,7 +401,7 @@ export default function AlbumUploadPage() {
 							alt="Full Screen Preview"
 							fill
 							className="object-contain"
-							unoptimized // Important for local blob URLs to render sharply
+								unoptimized
 						/>
 					</div>
 				</div>

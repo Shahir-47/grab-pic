@@ -11,7 +11,6 @@ export default function NotFound() {
 	return (
 		<main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6">
 			<div className="max-w-md w-full text-center space-y-8">
-				{/* Big 404 */}
 				<div className="space-y-2">
 					<p className="text-8xl font-black tracking-tighter text-zinc-200 dark:text-zinc-800 select-none">
 						404
@@ -25,7 +24,6 @@ export default function NotFound() {
 					</p>
 				</div>
 
-				{/* Actions */}
 				<div className="flex flex-col sm:flex-row gap-3 justify-center">
 					<Button
 						onClick={() => router.back()}
@@ -44,7 +42,6 @@ export default function NotFound() {
 					</Button>
 				</div>
 
-				{/* Branding */}
 				<div className="pt-4">
 					<GrabPicLogo size="sm" className="justify-center opacity-40" />
 				</div>

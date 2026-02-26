@@ -37,7 +37,6 @@ export default function Navbar() {
 		return () => subscription.unsubscribe();
 	}, []);
 
-	// Close mobile menu when clicking outside
 	useEffect(() => {
 		const handleClick = (e: MouseEvent) => {
 			if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -65,7 +64,6 @@ export default function Navbar() {
 			className="sticky top-0 z-40 w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl"
 		>
 			<div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-				{/* Logo / Brand */}
 				<Link
 					href={isLoggedIn ? "/dashboard" : "/"}
 					className="group transition-transform hover:scale-[1.02] active:scale-[0.98]"
@@ -73,7 +71,6 @@ export default function Navbar() {
 					<GrabPicLogo size="sm" />
 				</Link>
 
-				{/* Desktop nav */}
 				<div className="hidden sm:flex items-center gap-2">
 					{isLoggedIn ? (
 						<>
@@ -151,7 +148,6 @@ export default function Navbar() {
 					)}
 				</div>
 
-				{/* Mobile hamburger */}
 				<button
 					onClick={() => setMobileOpen((prev) => !prev)}
 					className="sm:hidden p-2 -mr-2 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
@@ -165,7 +161,6 @@ export default function Navbar() {
 				</button>
 			</div>
 
-			{/* Mobile dropdown panel */}
 			{mobileOpen && (
 				<div className="sm:hidden border-t border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 px-4 pb-4 pt-3 space-y-2">
 					{isLoggedIn ? (

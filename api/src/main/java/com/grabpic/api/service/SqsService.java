@@ -39,14 +39,9 @@ public class SqsService {
         sqsClient.sendMessage(request);
     }
 
-    /**
-     * Send multiple photos for processing in batches of 10 (SQS max).
-     * 50 photos = 5 API calls instead of 50.
-     */
     public void sendPhotosForProcessingBatch(List<PhotoMessage> messages) {
         if (messages == null || messages.isEmpty()) return;
 
-        // Split into chunks of 10 (SQS SendMessageBatch limit)
         for (int i = 0; i < messages.size(); i += SQS_BATCH_LIMIT) {
             List<PhotoMessage> chunk = messages.subList(i, Math.min(i + SQS_BATCH_LIMIT, messages.size()));
 

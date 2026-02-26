@@ -57,13 +57,11 @@ public class SecurityConfig {
                 .jwsAlgorithm(SignatureAlgorithm.ES256)
                 .build();
 
-        // Validate issuer claim — rejects JWTs from other Supabase projects
         decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwtIssuer));
 
         return decoder;
     }
 
-    // Centralized CORS configuration — origins loaded from application.properties
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -71,7 +69,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L); // Cache preflight for 1 hour
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

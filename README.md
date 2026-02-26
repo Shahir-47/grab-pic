@@ -106,7 +106,7 @@ The three-step process from the user's perspective:
 
 **Step 1: Upload.** The host creates an album, selects photos, and marks each one as "public" (anyone with the link sees it) or "protected" (only people whose face is in the photo can see it). Protected is the default. Photos go straight to cloud storage, and the protected ones get queued for AI processing automatically. If a photo is uploaded as public and later switched to protected, it is queued at toggle time (when still unprocessed).
 
-**Step 2: AI scans every face.** A background worker picks up each protected photo, detects every face in it, and stores a mathematical fingerprint (a 512-dimensional vector) for each face in the database. No manual tagging needed.
+**Step 2: AI scans every face.** A background worker picks up each protected photo, detects every face in it, and stores a mathematical fingerprint (a 512-dimensional vector) for each face in the database.
 
 **Step 3: Guests take a selfie.** The host shares one link. A guest opens it, takes a selfie right in the browser, and hits "Find My Photos." The system compares the guest's face against every face in the album and returns only the photos they appear in. They can download their matches as a zip file on the spot.
 
@@ -337,7 +337,7 @@ The `RateLimitFilter` also injects security headers on every response: `X-Conten
 
 **CloudFront CDN:** When configured (via `CLOUDFRONT_DOMAIN`, `CLOUDFRONT_KEY_PAIR_ID`, and `CLOUDFRONT_PRIVATE_KEY_STRING`), photo view URLs are generated as CloudFront signed URLs with 7-hour expiry. This reduces S3 egress costs and serves images from edge locations closer to the user. When CloudFront is not configured, the service gracefully falls back to S3 presigned URLs.
 
-**Photo quota enforcement** is applied at two layers (defense in depth): once when generating presigned upload URLs (`POST /{albumId}/upload-urls`) and again when saving photo metadata (`POST /{albumId}/photos`). The hard cap is 500 photos per user (across all albums), with a maximum batch size of 50 presigned URLs per request.
+**Photo quota enforcement** is applied at two layers: once when generating presigned upload URLs (`POST /{albumId}/upload-urls`) and again when saving photo metadata (`POST /{albumId}/photos`). The hard cap is 500 photos per user (across all albums), with a maximum batch size of 50 presigned URLs per request.
 
 **Upload size enforcement** uses a three-layer approach:
 
@@ -351,7 +351,7 @@ The `RateLimitFilter` also injects security headers on every response: `X-Conten
 
 ### 3. AI Face Worker / Python
 
-The AI worker is a long-running Python process deployed on an AWS EC2 Ubuntu instance. It runs in an infinite loop, long-polling the SQS queue for new photo processing jobs. This is the background workhorse that powers the face detection pipeline.
+The AI worker is a long-running Python process deployed on an AWS EC2 Ubuntu instance. It runs in an infinite loop, long-polling the SQS queue for new photo processing jobs.
 
 ```mermaid
 sequenceDiagram

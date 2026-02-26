@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * GrabPic brand logo — a distinctive aperture/viewfinder mark
- * that reflects the AI-powered photo recognition identity.
- */
-
 interface GrabPicLogoProps {
 	size?: "sm" | "md" | "lg" | "xl";
 	showText?: boolean;
@@ -27,7 +22,6 @@ export default function GrabPicLogo({
 
 	return (
 		<div className={`flex items-center gap-2.5 ${className}`}>
-			{/* The Mark — a stylized viewfinder/aperture with inner dot */}
 			<div
 				className={`${s.pad} rounded-xl bg-violet-600 dark:bg-violet-500 relative overflow-hidden`}
 			>
@@ -37,7 +31,6 @@ export default function GrabPicLogo({
 					xmlns="http://www.w3.org/2000/svg"
 					className={s.icon}
 				>
-					{/* Outer ring */}
 					<circle
 						cx="16"
 						cy="16"
@@ -48,9 +41,7 @@ export default function GrabPicLogo({
 						strokeDasharray="6 4"
 						opacity="0.5"
 					/>
-					{/* Inner lens */}
 					<circle cx="16" cy="16" r="8" stroke="white" strokeWidth={s.ring} />
-					{/* Aperture blades — 3 lines converging */}
 					<line
 						x1="16"
 						y1="3"
@@ -78,7 +69,6 @@ export default function GrabPicLogo({
 						strokeWidth={s.ring}
 						strokeLinecap="round"
 					/>
-					{/* Center dot — the "eye" */}
 					<circle cx="16" cy="16" r="2.5" fill="white" />
 				</svg>
 			</div>

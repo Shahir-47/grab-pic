@@ -30,7 +30,6 @@ export default function DashboardPage() {
 	const [newAlbumTitle, setNewAlbumTitle] = useState("");
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
-	// Fetch all albums when the dashboard loads
 	useEffect(() => {
 		fetchAlbums();
 	}, []);
@@ -93,7 +92,6 @@ export default function DashboardPage() {
 	return (
 		<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 lg:p-10">
 			<div className="max-w-6xl mx-auto space-y-8">
-				{/* Header */}
 				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 					<div>
 						<h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -106,7 +104,6 @@ export default function DashboardPage() {
 				</div>
 
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-					{/* Create New Album Card */}
 					<div className="bg-violet-50 dark:bg-violet-950 border-2 border-dashed border-violet-200 dark:border-violet-800 rounded-2xl p-6 flex flex-col justify-center">
 						<div className="w-10 h-10 bg-violet-100 dark:bg-violet-900/40 rounded-xl flex items-center justify-center mb-3">
 							<Plus className="w-5 h-5 text-violet-600 dark:text-violet-400" />
@@ -146,14 +143,12 @@ export default function DashboardPage() {
 						</form>
 					</div>
 
-					{/* Loading State */}
 					{isLoading && (
 						<div className="col-span-2 flex items-center justify-center">
 							<Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
 						</div>
 					)}
 
-					{/* Empty State */}
 					{!isLoading && albums.length === 0 && (
 						<div className="col-span-1 sm:col-span-1 lg:col-span-2 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center justify-center py-16 px-6 text-center">
 							<FolderOpen className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mb-4" />
@@ -167,7 +162,6 @@ export default function DashboardPage() {
 						</div>
 					)}
 
-					{/* Existing Albums List */}
 					{!isLoading &&
 						albums.map((album) => (
 							<div
@@ -177,7 +171,6 @@ export default function DashboardPage() {
 								}
 								className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden cursor-pointer hover:shadow-lg hover:border-violet-300 dark:hover:border-violet-700 transition-all group relative"
 							>
-								{/* Solid accent — left stripe */}
 								<div className="absolute top-0 left-0 w-1 h-full bg-violet-500 rounded-l-2xl" />
 
 								<div className="p-6 pl-5">

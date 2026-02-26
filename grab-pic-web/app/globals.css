@@ -129,7 +129,6 @@ button {
 	cursor: pointer;
 }
 
-/* Smooth page transitions */
 main,
 section {
 	animation: fadeUp 0.3s ease-out;

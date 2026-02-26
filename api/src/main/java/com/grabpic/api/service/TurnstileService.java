@@ -14,14 +14,7 @@ public class TurnstileService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    /**
-     * Verifies a Cloudflare Turnstile token.
-     * Returns true if the token is valid (user is human).
-     * Fails secure: returns false on any error or missing token.
-     * If no secret key is configured, skips verification (local dev).
-     */
     public boolean isHuman(String token) {
-        // If no secret is configured, allow all requests (local dev)
         if (secretKey == null || secretKey.isEmpty()) return true;
 
         if (token == null || token.isEmpty()) return false;
@@ -38,7 +31,7 @@ public class TurnstileService {
             Map<String, Object> response = restTemplate.postForObject(url, body, Map.class);
             return response != null && Boolean.TRUE.equals(response.get("success"));
         } catch (Exception e) {
-            return false; // Fail secure
+            return false;
         }
     }
 }

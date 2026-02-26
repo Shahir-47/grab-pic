@@ -4,7 +4,6 @@ import { useSyncExternalStore, useCallback } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Track theme changes via a simple pub/sub so useSyncExternalStore re-renders
 let listeners: (() => void)[] = [];
 function emitChange() {
 	for (const l of listeners) l();

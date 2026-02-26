@@ -4,11 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-/**
- * Hook that guards a page behind authentication.
- * Redirects unauthenticated users to /login?redirect=<current_path>
- * so they return to the right page after signing in.
- */
 export function useRequireAuth() {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -38,10 +33,6 @@ export function useRequireAuth() {
 	return { isLoading, isAuthenticated };
 }
 
-/**
- * Hook that redirects already-authenticated users away from public pages
- * (login, signup, home). Redirects to /dashboard if logged in.
- */
 export function useRedirectIfAuth() {
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(true);

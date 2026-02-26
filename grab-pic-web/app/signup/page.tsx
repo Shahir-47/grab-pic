@@ -70,7 +70,6 @@ export default function SignUpPage() {
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">
 			<div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800">
-				{/* Branding Section */}
 				<div className="flex flex-col items-center text-center space-y-3">
 					<GrabPicLogo size="md" />
 					<p className="text-zinc-500 dark:text-zinc-400 max-w-72 text-sm">
@@ -79,7 +78,6 @@ export default function SignUpPage() {
 					</p>
 				</div>
 
-				{/* OAuth Providers */}
 				<div className="grid grid-cols-2 gap-3">
 					<Button
 						variant="outline"
@@ -132,7 +130,6 @@ export default function SignUpPage() {
 					</div>
 				</div>
 
-				{/* Form */}
 				<form onSubmit={handleEmailSignUp} className="space-y-4">
 					<div className="space-y-2">
 						<Label htmlFor="email">Email</Label>
