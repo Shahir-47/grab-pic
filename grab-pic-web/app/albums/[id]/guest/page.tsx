@@ -35,6 +35,11 @@ export default function GuestWelcomePage() {
 	const albumId = params?.id || "";
 	const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 	const isTurnstileEnabled = Boolean(turnstileSiteKey);
+	const aiServiceBaseUrl =
+		process.env.NEXT_PUBLIC_AI_API_URL?.replace(/\/+$/, "") ?? "";
+	const aiSearchEndpoint = aiServiceBaseUrl
+		? `${aiServiceBaseUrl}/search`
+		: "/api/ai/search";
 
 	const [albumTitle, setAlbumTitle] = useState("");
 	const [publicPhotos, setPublicPhotos] = useState<Photo[]>([]);
@@ -244,7 +249,7 @@ export default function GuestWelcomePage() {
 				headers["X-Turnstile-Token"] = turnstileToken;
 			}
 
-			const aiRes = await fetch("/api/ai/search", {
+			const aiRes = await fetch(aiSearchEndpoint, {
 				method: "POST",
 				headers,
 				body: formData,
