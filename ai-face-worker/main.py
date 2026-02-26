@@ -54,56 +54,57 @@ def process_message(message):
     
     # Download image from S3 to a temporary file
     local_path = f"temp_{photo_id}.jpg"
-    s3.download_file(BUCKET_NAME, storage_url, local_path)
-    print("    -> Downloaded from S3")
-    
-    #  Run DeepFace
     try:
-        faces = DeepFace.represent(
-            img_path=local_path, 
-            model_name="GhostFaceNet",
-            detector_backend="retinaface",
-            enforce_detection=False 
-        )
-    except Exception as e:
-        print(f"    -> DeepFace Error: {e}")
-        faces = []
+        s3.download_file(BUCKET_NAME, storage_url, local_path)
+        print("    -> Downloaded from S3")
         
-    # DeepFace returns a list of dictionaries, one for each face found
-    valid_faces = [f for f in faces if f.get('facial_area', {}).get('w', 0) > 0]
-    print(f"    -> Found {len(valid_faces)} faces")
-    
-    # Save to PostgreSQL
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    try:
-        for face in valid_faces:
-            # convert the list of 4096 numbers into a string so PostgreSQL pgvector accepts it
-            embedding_str = f"[{','.join(map(str, face['embedding']))}]"
-            box_area_json = json.dumps(face['facial_area'])
-            
-            cur.execute(
-                "INSERT INTO photo_embeddings (photo_id, embedding, box_area) VALUES (%s, %s, %s)",
-                (photo_id, embedding_str, box_area_json)
+        #  Run DeepFace
+        try:
+            faces = DeepFace.represent(
+                img_path=local_path, 
+                model_name="GhostFaceNet",
+                detector_backend="retinaface",
+                enforce_detection=False 
             )
+        except Exception as e:
+            print(f"    -> DeepFace Error: {e}")
+            faces = []
             
-        # Update original photo status
-        cur.execute("UPDATE photos SET processed = True WHERE id = %s", (photo_id,))
-        conn.commit()
-        print("    -> Saved to Database")
+        # DeepFace returns a list of dictionaries, one for each face found
+        valid_faces = [f for f in faces if f.get('facial_area', {}).get('w', 0) > 0]
+        print(f"    -> Found {len(valid_faces)} faces")
         
-    except Exception as e:
-        print(f"    -> Database Error: {e}")
-        conn.rollback()
-        raise e
+        # Save to PostgreSQL
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        try:
+            for face in valid_faces:
+                # convert the list of 4096 numbers into a string so PostgreSQL pgvector accepts it
+                embedding_str = f"[{','.join(map(str, face['embedding']))}]"
+                box_area_json = json.dumps(face['facial_area'])
+                
+                cur.execute(
+                    "INSERT INTO photo_embeddings (photo_id, embedding, box_area) VALUES (%s, %s, %s)",
+                    (photo_id, embedding_str, box_area_json)
+                )
+                
+            # Update original photo status
+            cur.execute("UPDATE photos SET processed = True WHERE id = %s", (photo_id,))
+            conn.commit()
+            print("    -> Saved to Database")
+            
+        except Exception as e:
+            print(f"    -> Database Error: {e}")
+            conn.rollback()
+            raise e
+        finally:
+            cur.close()
+            conn.close()
     finally:
-        cur.close()
-        conn.close()
-        
-    # Clean up the downloaded file
-    if os.path.exists(local_path):
-        os.remove(local_path)
+        # Clean up the downloaded file no matter what
+        if os.path.exists(local_path):
+            os.remove(local_path)
 
 # ---  Infinite Worker Loop ---
 def main():
