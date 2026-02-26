@@ -2,6 +2,7 @@ import os
 import re
 import signal
 import tempfile
+from PIL import Image
 from psycopg2 import pool
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse
@@ -11,6 +12,10 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from deepface import DeepFace
 from dotenv import load_dotenv
+
+# --- Image safety limits ---
+MAX_IMAGE_PIXELS = 25_000_000
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 # --- Timeout for guest-facing DeepFace search ---
 DEEPFACE_TIMEOUT_SECS = 180
@@ -151,6 +156,21 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
     temp_file.close()
 
     try:
+        # Guard against decompression bombs before DeepFace decodes the image
+        try:
+            with Image.open(temp_file.name) as img:
+                w, h = img.size
+                if w * h > MAX_IMAGE_PIXELS:
+                    return JSONResponse(
+                        content={"error": "Image dimensions are too large. Please upload a smaller photo."},
+                        status_code=400
+                    )
+        except Exception:
+            return JSONResponse(
+                content={"error": "Could not read image. Please upload a valid JPEG, PNG, or WebP photo."},
+                status_code=400
+            )
+
         # Extract the facial embedding from the selfie (with strict timeout)
         try:
             signal.signal(signal.SIGALRM, _timeout_handler)

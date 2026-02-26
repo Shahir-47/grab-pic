@@ -161,16 +161,13 @@ public class RateLimitFilter implements Filter {
         httpRes.getWriter().write("{\"error\":\"" + message + "\"}");
     }
 
+    /**
+     * Returns the real client IP.  Tomcat's RemoteIpValve (enabled via
+     * server.forward-headers-strategy=NATIVE) has already processed the
+     * X-Forwarded-For header, stripping trusted-proxy hops.  We never
+     * read the header ourselves, so spoofed values are ignored.
+     */
     private String getClientIp(HttpServletRequest request) {
-        // Check standard proxy headers
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && !ip.isEmpty()) {
-            return ip.split(",")[0].trim(); // First IP is the real client
-        }
-        ip = request.getHeader("X-Real-IP");
-        if (ip != null && !ip.isEmpty()) {
-            return ip;
-        }
         return request.getRemoteAddr();
     }
 }

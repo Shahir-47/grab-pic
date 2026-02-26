@@ -2,9 +2,14 @@ import os
 import json
 import signal
 import boto3
+from PIL import Image
 from psycopg2 import pool
 from deepface import DeepFace
 from dotenv import load_dotenv
+
+# --- Image safety limits ---
+MAX_IMAGE_PIXELS = 25_000_000
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS  # also arm Pillow's built-in guard
 
 # --- Timeout for DeepFace processing ---
 DEEPFACE_TIMEOUT_SECS = 300
@@ -14,6 +19,21 @@ class DeepFaceTimeout(Exception):
 
 def _timeout_handler(signum, frame):
     raise DeepFaceTimeout("DeepFace processing timed out")
+
+def _validate_image_dimensions(path: str) -> bool:
+    """Open the image header to check pixel count without fully decoding.
+    Returns True if the image is safe, False if it's a decompression bomb."""
+    try:
+        with Image.open(path) as img:
+            w, h = img.size
+            pixels = w * h
+            if pixels > MAX_IMAGE_PIXELS:
+                print(f"    -> REJECTED: {w}x{h} = {pixels:,} pixels (limit {MAX_IMAGE_PIXELS:,})")
+                return False
+            return True
+    except Exception as e:
+        print(f"    -> Image validation failed: {e}")
+        return False
 
 load_dotenv()
 
@@ -69,7 +89,21 @@ def process_message(message):
     try:
         s3.download_file(BUCKET_NAME, storage_url, local_path)
         print("    -> Downloaded from S3")
-        
+
+        # Guard against decompression bombs before DeepFace decodes the image
+        if not _validate_image_dimensions(local_path):
+            print(f"    -> Skipping photo {photo_id}: image exceeds pixel limit")
+            # Mark as processed so we don't retry a malicious image forever
+            conn = db_pool.getconn()
+            try:
+                cur = conn.cursor()
+                cur.execute("UPDATE photos SET processed = True WHERE id = %s", (photo_id,))
+                conn.commit()
+                cur.close()
+            finally:
+                db_pool.putconn(conn)
+            return
+
         #  Run DeepFace 
         try:
             signal.signal(signal.SIGALRM, _timeout_handler)
