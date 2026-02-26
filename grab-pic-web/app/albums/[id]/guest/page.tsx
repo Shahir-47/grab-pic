@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { Button } from "@/components/ui/button";
 import {
 	ScanFace,
@@ -48,6 +49,8 @@ export default function GuestWelcomePage() {
 	const [isGuestSelecting, setIsGuestSelecting] = useState(false);
 	const [guestSelectedIds, setGuestSelectedIds] = useState<string[]>([]);
 	const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
 	const [isMobile, setIsMobile] = useState(true);
 	const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -384,9 +387,16 @@ export default function GuestWelcomePage() {
 							</div>
 						)}
 
+						<div className="flex justify-center my-4">
+							<Turnstile
+								siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+								onSuccess={(token) => setTurnstileToken(token)}
+							/>
+						</div>
+
 						<Button
 							onClick={handleSearch}
-							disabled={!selfie || isSearching}
+							disabled={!selfie || isSearching || !turnstileToken}
 							className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6 text-base font-bold shadow-lg transition-all"
 						>
 							{isSearching ? (

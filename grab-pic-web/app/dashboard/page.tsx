@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
@@ -27,6 +28,7 @@ export default function DashboardPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isCreating, setIsCreating] = useState(false);
 	const [newAlbumTitle, setNewAlbumTitle] = useState("");
+	const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
 	// Fetch all albums when the dashboard loads
 	useEffect(() => {
@@ -55,7 +57,10 @@ export default function DashboardPage() {
 		try {
 			const res = await apiFetch("/api/albums", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					"X-Turnstile-Token": turnstileToken || "",
+				},
 				body: JSON.stringify({ title: newAlbumTitle }),
 			});
 
@@ -121,10 +126,16 @@ export default function DashboardPage() {
 								onChange={(e) => setNewAlbumTitle(e.target.value)}
 								disabled={isCreating}
 							/>
+							<div className="flex justify-center">
+								<Turnstile
+									siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+									onSuccess={(token) => setTurnstileToken(token)}
+								/>
+							</div>
 							<Button
 								type="submit"
 								className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold py-5 rounded-xl"
-								disabled={isCreating || !newAlbumTitle}
+								disabled={isCreating || !newAlbumTitle || !turnstileToken}
 							>
 								{isCreating ? (
 									<Loader2 className="w-5 h-5 animate-spin" />
