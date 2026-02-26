@@ -113,4 +113,40 @@ public class S3StorageService {
 
         return presigner.presignGetObject(presignRequest).url().toString();
     }
+
+    /**
+     * Delete a single object from S3.
+     */
+    public void deleteObject(String s3Key) {
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build());
+            log.info("Deleted S3 object: {}", s3Key);
+        } catch (Exception e) {
+            log.error("Failed to delete S3 object {}: {}", s3Key, e.getMessage());
+        }
+    }
+
+    /**
+     * Delete multiple objects from S3 in a single batch request.
+     */
+    public void deleteObjects(List<String> s3Keys) {
+        if (s3Keys == null || s3Keys.isEmpty()) return;
+
+        try {
+            List<ObjectIdentifier> identifiers = s3Keys.stream()
+                    .map(key -> ObjectIdentifier.builder().key(key).build())
+                    .toList();
+
+            s3Client.deleteObjects(DeleteObjectsRequest.builder()
+                    .bucket(bucketName)
+                    .delete(Delete.builder().objects(identifiers).quiet(true).build())
+                    .build());
+            log.info("Batch-deleted {} S3 objects.", s3Keys.size());
+        } catch (Exception e) {
+            log.error("Failed to batch-delete S3 objects: {}", e.getMessage());
+        }
+    }
 }

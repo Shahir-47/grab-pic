@@ -213,6 +213,8 @@ public class AlbumController {
                 return ResponseEntity.badRequest().body("Photo does not belong to this album.");
             }
 
+            // Delete the actual image from S3 before removing the DB record
+            s3StorageService.deleteObject(photoOpt.get().getStorageUrl());
             photoRepository.delete(photoOpt.get());
             return ResponseEntity.ok().body("Photo removed successfully.");
         } catch (Exception e) {
@@ -229,6 +231,13 @@ public class AlbumController {
             if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
                 return ResponseEntity.status(403).body("You do not own this album.");
             }
+
+            // Batch-delete every image from S3 before removing the album
+            List<Photo> albumPhotos = photoRepository.findByAlbumId(albumId);
+            List<String> s3Keys = albumPhotos.stream()
+                    .map(Photo::getStorageUrl)
+                    .toList();
+            s3StorageService.deleteObjects(s3Keys);
 
             albumRepository.delete(albumOpt.get());
             return ResponseEntity.ok().body("Album deleted successfully.");
