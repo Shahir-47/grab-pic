@@ -23,13 +23,16 @@ public class S3StorageService {
     private static final Logger log = LoggerFactory.getLogger(S3StorageService.class);
 
     private final String bucketName;
+    private final String[] allowedOrigins;
     private final S3Presigner presigner;
     private final S3Client s3Client;
 
     public S3StorageService(@Value("${aws.s3.region}") String region,
-                            @Value("${aws.s3.bucket-name}") String bucketName) {
+                            @Value("${aws.s3.bucket-name}") String bucketName,
+                            @Value("${cors.allowed-origins}") String allowedOrigins) {
 
         this.bucketName = bucketName;
+        this.allowedOrigins = allowedOrigins.split(",");
 
         this.presigner = S3Presigner.builder()
                 .region(Region.of(region))
@@ -73,6 +76,27 @@ public class S3StorageService {
             log.info("S3 lifecycle rule applied: abort incomplete multipart uploads after 1 day.");
         } catch (Exception e) {
             log.warn("Could not apply S3 lifecycle rule (non-fatal): {}", e.getMessage());
+        }
+
+        // Allow the frontend to fetch images directly from S3
+        try {
+            CORSRule corsRule = CORSRule.builder()
+                    .allowedOrigins(allowedOrigins)
+                    .allowedMethods("GET")
+                    .allowedHeaders("*")
+                    .maxAgeSeconds(3600)
+                    .build();
+
+            s3Client.putBucketCors(PutBucketCorsRequest.builder()
+                    .bucket(bucketName)
+                    .corsConfiguration(CORSConfiguration.builder()
+                            .corsRules(corsRule)
+                            .build())
+                    .build());
+
+            log.info("S3 CORS applied: allowing GET from {}", String.join(", ", allowedOrigins));
+        } catch (Exception e) {
+            log.warn("Could not apply S3 CORS config (non-fatal): {}", e.getMessage());
         }
     }
 

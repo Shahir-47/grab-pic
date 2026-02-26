@@ -1,12 +1,11 @@
 /**
- * Fetches an image blob through our server-side proxy to avoid CORS issues
- * with S3 presigned URLs.
+ * Fetches an image blob directly from S3 (CORS is configured on the bucket).
+ * No Vercel proxy needed — data flows straight from S3 to the browser.
  */
 export async function fetchImageAsBlob(url: string): Promise<Blob> {
-	const proxyUrl = `/api/download-proxy?url=${encodeURIComponent(url)}`;
-	const response = await fetch(proxyUrl);
+	const response = await fetch(url);
 	if (!response.ok) {
-		throw new Error(`Proxy fetch failed: ${response.status}`);
+		throw new Error(`Image fetch failed: ${response.status}`);
 	}
 	return response.blob();
 }
