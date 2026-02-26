@@ -125,7 +125,7 @@ export default function Home() {
 								step: "1",
 								icon: Upload,
 								title: "Upload your photos",
-								desc: "Drop all photos from your event into an album. Mark each one as public (anyone with the link) or protected (matched by face only).",
+								desc: "Drop all photos from your event into an album. Mark each one as public (anyone with the link) or protected (matched by face only), and switch to protected anytime to start AI scanning.",
 							},
 							{
 								step: "2",
@@ -192,7 +192,7 @@ export default function Home() {
 						{
 							icon: Globe,
 							title: "Public & Protected Modes",
-							desc: "Public photos are visible to anyone with the album link. Protected photos are only shown to the people in them, matched by facial recognition.",
+							desc: "Public photos are visible to anyone with the album link. Protected photos are shown only to matched faces, and photos switched to protected are auto-queued for AI scanning.",
 							color: "text-blue-500",
 						},
 						{

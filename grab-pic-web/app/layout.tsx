@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 		template: "%s | GrabPic",
 	},
 	description:
-		"Upload event photos, share one link, and let each guest take a selfie to instantly find every photo they appear in. AI-powered facial recognition — no tagging, no scrolling.",
+		"Upload event photos, share one link, and let each guest take a selfie to instantly find every photo they appear in. Use public and protected privacy modes, and auto-scan newly protected photos with AI.",
 	keywords: [
 		"event photos",
 		"AI photo sharing",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 	openGraph: {
 		title: "GrabPic — AI Photo Sharing for Events",
 		description:
-			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie.",
+			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie. Public/protected modes included.",
 		type: "website",
 		siteName: "GrabPic",
 		url: SITE_URL,
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
 		card: "summary_large_image",
 		title: "GrabPic — AI Photo Sharing for Events",
 		description:
-			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie.",
+			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie. Public/protected modes included.",
 		creator: "@grabpic",
 	},
 	robots: {
@@ -93,7 +93,7 @@ export default function RootLayout({
 							name: "GrabPic",
 							url: "https://grab-pic.vercel.app",
 							description:
-								"AI-powered event photo sharing with facial recognition. Upload event photos, share one link, and each guest finds their photos with a selfie.",
+								"AI-powered event photo sharing with facial recognition. Upload event photos, share one link, and each guest finds their photos with a selfie. Switch photos between public and protected anytime.",
 							applicationCategory: "PhotographyApplication",
 							operatingSystem: "Web",
 							offers: {
@@ -106,6 +106,7 @@ export default function RootLayout({
 								"Instant selfie-based photo search",
 								"Bulk ZIP photo downloads",
 								"Public and protected photo privacy modes",
+								"Automatic AI re-queue when switching photos to protected",
 								"Built-in selfie camera",
 								"QR code album sharing",
 								"No guest account required",

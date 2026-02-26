@@ -202,7 +202,7 @@ export default function AlbumViewPage() {
 		const photoWord = count === 1 ? "photo" : "photos";
 		const message = makePublic
 			? `Make ${count} ${photoWord} public?\n\nPublic photos are visible to anyone with the album link.`
-			: `Make ${count} ${photoWord} protected?\n\nProtected photos are only shown to the people in them, matched by facial recognition.`;
+			: `Make ${count} ${photoWord} protected?\n\nProtected photos are only shown to the people in them, matched by facial recognition.\n\nAny unscanned photo switched from public will start AI scanning automatically.`;
 		const confirmToggle = window.confirm(message);
 		if (!confirmToggle) return;
 

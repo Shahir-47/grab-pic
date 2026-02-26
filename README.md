@@ -104,7 +104,7 @@ flowchart LR
 
 The three-step process from the user's perspective:
 
-**Step 1: Upload.** The host creates an album, selects photos, and marks each one as "public" (anyone with the link sees it) or "protected" (only people whose face is in the photo can see it). Protected is the default. Photos go straight to cloud storage, and the protected ones get queued for AI processing automatically.
+**Step 1: Upload.** The host creates an album, selects photos, and marks each one as "public" (anyone with the link sees it) or "protected" (only people whose face is in the photo can see it). Protected is the default. Photos go straight to cloud storage, and the protected ones get queued for AI processing automatically. If a photo is uploaded as public and later switched to protected, it is queued at toggle time (when still unprocessed).
 
 **Step 2: AI scans every face.** A background worker picks up each protected photo, detects every face in it, and stores a mathematical fingerprint (a 512-dimensional vector) for each face in the database. No manual tagging needed.
 
@@ -569,7 +569,7 @@ sequenceDiagram
 
 The upload flow uses a presigned URL pattern where the browser uploads directly to S3, bypassing the backend entirely for file transfer. The frontend sends file sizes in the upload-urls request body, and the backend signs `Content-Length` into each presigned PUT URL so S3 rejects uploads that do not match the declared size. Presigned PUT URLs expire after 15 minutes and are scoped to `content-type: image/jpeg`. The S3 key follows `albums/{albumId}/{randomUUID}.jpg`. Before persisting photo metadata, the backend calls `HeadObject` on each uploaded key to verify the object exists and is within the 10 MB limit.
 
-Only photos marked as `PROTECTED` are sent to SQS for AI processing. Public photos skip the queue because they are visible to everyone.
+Photos marked as `PROTECTED` are sent to SQS for AI processing. Public photos skip queueing at upload time because they are visible to everyone. If a host later changes a photo from `PUBLIC` to `PROTECTED`, the backend now enqueues it for AI processing as long as `processed = false`.
 
 ---
 
@@ -633,7 +633,7 @@ flowchart TD
 | `POST`   | `/api/albums/{albumId}/photos`                                   | Save photo metadata after S3 upload + queue for AI |
 | `GET`    | `/api/albums/{albumId}/photos`                                   | Get all photos in album with presigned view URLs   |
 | `DELETE` | `/api/albums/{albumId}/photos/{photoId}`                         | Delete a single photo                              |
-| `PUT`    | `/api/albums/{albumId}/photos/{photoId}/privacy?makePublic=bool` | Toggle photo privacy                               |
+| `PUT`    | `/api/albums/{albumId}/photos/{photoId}/privacy?makePublic=bool` | Toggle photo privacy (`PUBLIC` -> `PROTECTED` auto-queues unprocessed photos) |
 
 ### Public Guest Endpoints (No Auth)
 

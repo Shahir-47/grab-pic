@@ -232,16 +232,18 @@ export default function AlbumUploadPage() {
 
 					<div className="bg-violet-50 dark:bg-violet-950 border border-violet-100 dark:border-violet-900 rounded-2xl p-6 flex gap-4 items-start">
 						<Info className="w-6 h-6 text-violet-600 mt-1 shrink-0" />
-						<div className="space-y-2 text-sm text-violet-900 dark:text-violet-200">
-							<h3 className="font-bold text-base">How Album Privacy Works</h3>
-							<p>
-								<strong className="text-zinc-900 dark:text-white">
-									<Lock className="w-3 h-3 inline pb-0.5" /> Protected
-								</strong>{" "}
-								(default) &mdash; These photos are only shown to the specific
-								people in them, matched by facial recognition. Guests take a
-								selfie and only see photos that match their face.
-							</p>
+							<div className="space-y-2 text-sm text-violet-900 dark:text-violet-200">
+								<h3 className="font-bold text-base">How Album Privacy Works</h3>
+								<p>
+									<strong className="text-zinc-900 dark:text-white">
+										<Lock className="w-3 h-3 inline pb-0.5" /> Protected
+									</strong>{" "}
+									(default) &mdash; These photos are only shown to the specific
+									people in them, matched by facial recognition. Guests take a
+									selfie and only see photos that match their face. If you later
+									switch a photo from public to protected, GrabPic will
+									automatically queue it for AI scanning.
+								</p>
 							<p>
 								<strong className="text-emerald-600 dark:text-emerald-400">
 									<Globe className="w-3 h-3 inline pb-0.5" /> Public
