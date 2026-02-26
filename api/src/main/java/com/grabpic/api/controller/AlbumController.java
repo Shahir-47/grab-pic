@@ -86,7 +86,7 @@ public class AlbumController {
         Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
         if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
         if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
-            return ResponseEntity.status(403).build();
+            return ResponseEntity.status(403).body("You do not have permission to upload to this album.");
         }
 
         // Hard-cap: never generate more than 50 pre-signed URLs in a single call

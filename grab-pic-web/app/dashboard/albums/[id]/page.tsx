@@ -91,8 +91,12 @@ export default function AlbumUploadPage() {
 			const response = await apiFetch(
 				`/api/albums/${albumId}/upload-urls?count=${pendingPhotos.length}`,
 			);
-			if (!response.ok)
-				throw new Error("Failed to get secure upload links from backend");
+			if (!response.ok) {
+				const errorMsg = await response.text();
+				throw new Error(
+					errorMsg || "Unable to prepare your upload. Please try again.",
+				);
+			}
 
 			const presignedUrls: string[] = await response.json();
 			const uploadPromises = pendingPhotos.map(async (photo, index) => {
@@ -155,8 +159,12 @@ export default function AlbumUploadPage() {
 				});
 
 				if (!dbResponse.ok) {
+					const errorMsg = await dbResponse.text();
 					console.error("AWS Upload succeeded, but Database save failed.");
-					alert("Photos uploaded to cloud, but failed to save to album.");
+					alert(
+						errorMsg ||
+							"Photos uploaded to cloud, but failed to save to album.",
+					);
 				} else {
 					console.log("Successfully saved to database!");
 					setPhotos([]);
@@ -165,9 +173,11 @@ export default function AlbumUploadPage() {
 			}
 		} catch (error) {
 			console.error("Upload process failed:", error);
-			alert(
-				"Failed to start uploads. Make sure Spring Boot is running on port 8080.",
-			);
+			const message =
+				error instanceof Error && error.message
+					? error.message
+					: "Something went wrong while uploading. Please try again.";
+			alert(message);
 		} finally {
 			setIsUploading(false);
 		}

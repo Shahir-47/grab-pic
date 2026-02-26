@@ -63,13 +63,16 @@ export default function DashboardPage() {
 				const newAlbum = await res.json();
 				router.push(`/dashboard/albums/${newAlbum.id}`);
 			} else {
+				const errorMsg = await res.text();
 				console.error("Server error. Status:", res.status);
-				alert("Failed to create album. Are you fully logged in?");
+				alert(errorMsg || "Failed to create album. Are you fully logged in?");
 				setIsCreating(false);
 			}
 		} catch (error) {
-			console.error("Network failed to connect to Spring Boot:", error);
-			alert("Network error. Is your Spring Boot server running?");
+			console.error("Network failed to connect:", error);
+			alert(
+				"Unable to reach the server. Please check your connection and try again.",
+			);
 			setIsCreating(false);
 		}
 	};
