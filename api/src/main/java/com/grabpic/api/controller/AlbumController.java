@@ -71,7 +71,11 @@ public class AlbumController {
     }
     
     private static final int MAX_UPLOAD_BATCH = 50;
-    private static final long MAX_PHOTOS_PER_ALBUM = 500;
+    private static final long MAX_PHOTOS_PER_USER = 500;
+    private static final String QUOTA_MSG =
+            "You have reached the maximum of " + MAX_PHOTOS_PER_USER
+            + " photos. Please delete old photos to free up space, "
+            + "or contact shahir.a@outlook.com for assistance.";
 
     @GetMapping("/{albumId}/upload-urls")
     public ResponseEntity<?> getUploadUrls(
@@ -91,14 +95,13 @@ public class AlbumController {
                     .body("Upload count must be between 1 and " + MAX_UPLOAD_BATCH + ".");
         }
 
-        // Storage quota: reject if album already has 500 photos or would exceed it
-        long existingCount = photoRepository.countByAlbumId(albumId);
-        if (existingCount >= MAX_PHOTOS_PER_ALBUM) {
-            return ResponseEntity.badRequest()
-                    .body("Album has reached the maximum of " + MAX_PHOTOS_PER_ALBUM + " photos.");
+        // Global per-user photo quota
+        long totalUserPhotos = photoRepository.countByAlbumHostId(jwt.getSubject());
+        if (totalUserPhotos >= MAX_PHOTOS_PER_USER) {
+            return ResponseEntity.badRequest().body(QUOTA_MSG);
         }
         // Clamp to remaining capacity so we never exceed the limit
-        int allowed = (int) Math.min(count, MAX_PHOTOS_PER_ALBUM - existingCount);
+        int allowed = (int) Math.min(count, MAX_PHOTOS_PER_USER - totalUserPhotos);
 
         return ResponseEntity.ok(s3StorageService.generateBatchUploadUrls(albumId, allowed));
     }
@@ -118,13 +121,14 @@ public class AlbumController {
             return ResponseEntity.status(403).body("You do not own this album.");
         }
 
-        // Enforce album quota at save time too (defense in depth)
-        long existingCount = photoRepository.countByAlbumId(albumId);
+        // Global per-user photo quota (defense in depth)
+        long totalUserPhotos = photoRepository.countByAlbumHostId(jwt.getSubject());
         int incoming = request.getPhotos().size();
-        if (existingCount + incoming > MAX_PHOTOS_PER_ALBUM) {
+        if (totalUserPhotos + incoming > MAX_PHOTOS_PER_USER) {
             return ResponseEntity.badRequest()
-                    .body("Cannot save " + incoming + " photos. Album already has " + existingCount
-                            + " of " + MAX_PHOTOS_PER_ALBUM + " allowed.");
+                    .body("Cannot save " + incoming + " photos. You already have " + totalUserPhotos
+                            + " of " + MAX_PHOTOS_PER_USER + " allowed. "
+                            + "Please delete old photos or contact shahir.a@outlook.com for assistance.");
         }
 
         List<Photo> photosToSave = new ArrayList<>();
