@@ -38,6 +38,26 @@ limiter = Limiter(key_func=_get_client_ip)
 app = FastAPI()
 app.state.limiter = limiter
 
+# --- Ensure HNSW vector index exists on startup ---
+def _ensure_vector_index():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_photo_embeddings_hnsw
+            ON photo_embeddings
+            USING hnsw (embedding vector_cosine_ops)
+            WITH (m = 16, ef_construction = 64);
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("[+] HNSW vector index verified/created on photo_embeddings.embedding")
+    except Exception as e:
+        print(f"[!] Could not create HNSW index (non-fatal): {e}")
+
+_ensure_vector_index()
+
 @app.exception_handler(RateLimitExceeded)
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
