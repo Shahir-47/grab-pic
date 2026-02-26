@@ -76,17 +76,18 @@ public class S3StorageService {
         }
     }
 
-    public List<String> generateBatchUploadUrls(UUID albumId, int count) {
+    public List<String> generateBatchUploadUrls(UUID albumId, List<Long> fileSizes) {
         List<String> urls = new ArrayList<>();
 
-        for (int i = 0; i < count; i++) {
+        for (Long fileSize : fileSizes) {
             // This groups the photos in S3 under a folder named after the Album ID
             String fileName = "albums/" + albumId.toString() + "/" + UUID.randomUUID() + ".jpg";
 
             PutObjectRequest objectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(fileName)
-                    .contentType("image/jpeg") // Ensures the browser uploads it as an image
+                    .contentType("image/jpeg")   // S3 rejects uploads with a different Content-Type
+                    .contentLength(fileSize)       // S3 rejects uploads whose size doesn't match exactly
                     .build();
 
             PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
@@ -112,6 +113,25 @@ public class S3StorageService {
                 .build();
 
         return presigner.presignGetObject(presignRequest).url().toString();
+    }
+
+    /**
+     * Returns the size (in bytes) of an object in S3, or -1 if the object does not exist
+     * or an error occurs. Used for post-upload size validation.
+     */
+    public long getObjectSize(String s3Key) {
+        try {
+            HeadObjectResponse response = s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build());
+            return response.contentLength();
+        } catch (NoSuchKeyException e) {
+            return -1;
+        } catch (Exception e) {
+            log.error("HeadObject failed for {}: {}", s3Key, e.getMessage());
+            return -1;
+        }
     }
 
     /**

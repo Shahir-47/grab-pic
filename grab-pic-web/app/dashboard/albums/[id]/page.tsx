@@ -48,17 +48,29 @@ export default function AlbumUploadPage() {
 		);
 	}
 
+	const MAX_PHOTO_SIZE = 10 * 1024 * 1024; // 10 MB
+
 	//  Load files into browser memory and create preview URLs
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (!e.target.files) return;
 
-		const newFiles = Array.from(e.target.files).map((file) => ({
-			id: Math.random().toString(36).substring(7),
-			file,
-			previewUrl: URL.createObjectURL(file),
-			isPublic: false,
-			status: "idle" as const,
-		}));
+		const selected = Array.from(e.target.files);
+		const oversized = selected.filter((f) => f.size > MAX_PHOTO_SIZE);
+		if (oversized.length > 0) {
+			alert(
+				`${oversized.length} photo(s) exceed the 10 MB limit and were skipped.`,
+			);
+		}
+
+		const newFiles = selected
+			.filter((f) => f.size <= MAX_PHOTO_SIZE)
+			.map((file) => ({
+				id: Math.random().toString(36).substring(7),
+				file,
+				previewUrl: URL.createObjectURL(file),
+				isPublic: false,
+				status: "idle" as const,
+			}));
 
 		setPhotos((prev) => [...prev, ...newFiles]);
 		// Reset input so the same file can be selected again
@@ -88,8 +100,14 @@ export default function AlbumUploadPage() {
 		setIsUploading(true);
 
 		try {
+			const fileSizes = pendingPhotos.map((p) => p.file.size);
 			const response = await apiFetch(
-				`/api/albums/${albumId}/upload-urls?count=${pendingPhotos.length}`,
+				`/api/albums/${albumId}/upload-urls`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ fileSizes }),
+				},
 			);
 			if (!response.ok) {
 				const errorMsg = await response.text();
@@ -113,7 +131,8 @@ export default function AlbumUploadPage() {
 						method: "PUT",
 						body: photo.file,
 						headers: {
-							"Content-Type": photo.file.type,
+							"Content-Type": "image/jpeg",
+							"Content-Length": String(photo.file.size),
 						},
 					});
 

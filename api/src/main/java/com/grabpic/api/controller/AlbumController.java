@@ -82,6 +82,7 @@ public class AlbumController {
     }
     
     private static final int MAX_UPLOAD_BATCH = 50;
+    private static final long MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
     private static final long MAX_PHOTOS_PER_USER = 500;
     private static final String QUOTA_MSG =
             "You have reached the maximum of " + MAX_PHOTOS_PER_USER
@@ -104,10 +105,10 @@ public class AlbumController {
         return storageUrl.startsWith(expectedPrefix);
     }
 
-    @GetMapping("/{albumId}/upload-urls")
+    @PostMapping("/{albumId}/upload-urls")
     public ResponseEntity<?> getUploadUrls(
             @PathVariable UUID albumId,
-            @RequestParam(defaultValue = "1") int count,
+            @RequestBody com.grabpic.api.dto.UploadUrlRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
         Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
@@ -116,10 +117,18 @@ public class AlbumController {
             return ResponseEntity.status(403).body("You do not have permission to upload to this album.");
         }
 
-        // Hard-cap: never generate more than 50 pre-signed URLs in a single call
-        if (count < 1 || count > MAX_UPLOAD_BATCH) {
+        List<Long> fileSizes = request.getFileSizes();
+        if (fileSizes == null || fileSizes.isEmpty() || fileSizes.size() > MAX_UPLOAD_BATCH) {
             return ResponseEntity.badRequest()
                     .body("Upload count must be between 1 and " + MAX_UPLOAD_BATCH + ".");
+        }
+
+        // Validate every file size is within bounds
+        for (Long size : fileSizes) {
+            if (size == null || size <= 0 || size > MAX_PHOTO_SIZE_BYTES) {
+                return ResponseEntity.badRequest()
+                        .body("Each photo must be between 1 byte and 10 MB.");
+            }
         }
 
         // Global per-user photo quota
@@ -128,9 +137,10 @@ public class AlbumController {
             return ResponseEntity.badRequest().body(QUOTA_MSG);
         }
         // Clamp to remaining capacity so we never exceed the limit
-        int allowed = (int) Math.min(count, MAX_PHOTOS_PER_USER - totalUserPhotos);
+        int allowed = (int) Math.min(fileSizes.size(), MAX_PHOTOS_PER_USER - totalUserPhotos);
+        List<Long> allowedSizes = fileSizes.subList(0, allowed);
 
-        return ResponseEntity.ok(s3StorageService.generateBatchUploadUrls(albumId, allowed));
+        return ResponseEntity.ok(s3StorageService.generateBatchUploadUrls(albumId, allowedSizes));
     }
 
     @PostMapping("/{albumId}/photos")
@@ -159,12 +169,27 @@ public class AlbumController {
         }
 
         // Validate every incoming storage URL before persisting anything
+        List<String> keysToCleanUp = new ArrayList<>();
         for (PhotoSaveRequest.PhotoItem item : request.getPhotos()) {
             if (!isValidStorageKey(item.getStorageUrl(), albumId)) {
+                // Clean up any objects we already validated before failing
+                if (!keysToCleanUp.isEmpty()) s3StorageService.deleteObjects(keysToCleanUp);
                 return ResponseEntity.badRequest()
                         .body("Invalid photo reference detected. Please re-upload your photos.");
             }
+
+            // Defense-in-depth: verify the object actually exists in S3 and is within size limits
+            long objectSize = s3StorageService.getObjectSize(item.getStorageUrl());
+            if (objectSize <= 0 || objectSize > MAX_PHOTO_SIZE_BYTES) {
+                keysToCleanUp.add(item.getStorageUrl());
+                if (!keysToCleanUp.isEmpty()) s3StorageService.deleteObjects(keysToCleanUp);
+                return ResponseEntity.badRequest()
+                        .body("One or more photos failed validation (missing or too large). Maximum size is 10 MB.");
+            }
+            keysToCleanUp.add(item.getStorageUrl());
         }
+        // All validated — clear the cleanup list so we don't delete them
+        keysToCleanUp.clear();
 
         List<Photo> photosToSave = new ArrayList<>();
 
