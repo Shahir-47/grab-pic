@@ -10,10 +10,16 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.cloudfront.CloudFrontUtilities;
+import software.amazon.awssdk.services.cloudfront.model.CannedSignerRequest;
 
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,12 +33,36 @@ public class S3StorageService {
     private final S3Presigner presigner;
     private final S3Client s3Client;
 
+    // CloudFront signed URL support (null when not configured, e.g. local dev)
+    private final String cloudfrontDomain;
+    private final String cloudfrontKeyPairId;
+    private final PrivateKey cloudfrontPrivateKey;
+    private final CloudFrontUtilities cloudFrontUtilities;
+
     public S3StorageService(@Value("${aws.s3.region}") String region,
                             @Value("${aws.s3.bucket-name}") String bucketName,
-                            @Value("${cors.allowed-origins}") String allowedOrigins) {
+                            @Value("${cors.allowed-origins}") String allowedOrigins,
+                            @Value("${aws.cloudfront.domain:}") String cloudfrontDomain,
+                            @Value("${aws.cloudfront.key-pair-id:}") String cloudfrontKeyPairId,
+                            @Value("${aws.cloudfront.private-key-string:}") String cloudfrontPrivateKeyString) {
 
         this.bucketName = bucketName;
         this.allowedOrigins = allowedOrigins.split(",");
+
+        // CloudFront is optional — when all three values are set we use signed CDN URLs
+        if (!cloudfrontDomain.isBlank() && !cloudfrontKeyPairId.isBlank() && !cloudfrontPrivateKeyString.isBlank()) {
+            this.cloudfrontDomain = cloudfrontDomain;
+            this.cloudfrontKeyPairId = cloudfrontKeyPairId;
+            this.cloudfrontPrivateKey = parsePemPrivateKey(cloudfrontPrivateKeyString);
+            this.cloudFrontUtilities = CloudFrontUtilities.create();
+            log.info("CloudFront signing enabled: {}", cloudfrontDomain);
+        } else {
+            this.cloudfrontDomain = null;
+            this.cloudfrontKeyPairId = null;
+            this.cloudfrontPrivateKey = null;
+            this.cloudFrontUtilities = null;
+            log.info("CloudFront not configured — falling back to direct S3 pre-signed URLs");
+        }
 
         this.presigner = S3Presigner.builder()
                 .region(Region.of(region))
@@ -41,6 +71,26 @@ public class S3StorageService {
         this.s3Client = S3Client.builder()
                 .region(Region.of(region))
                 .build();
+    }
+
+    /**
+     * Parses a PEM-encoded RSA private key string into a {@link PrivateKey}.
+     * Accepts the full PEM (with or without header/footer lines and newlines).
+     */
+    private static PrivateKey parsePemPrivateKey(String pem) {
+        try {
+            String base64 = pem
+                    .replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                    .replace("-----END RSA PRIVATE KEY-----", "")
+                    .replaceAll("\\s", "");
+            byte[] decoded = Base64.getDecoder().decode(base64);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(decoded);
+            return KeyFactory.getInstance("RSA").generatePrivate(keySpec);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse CloudFront private key from PEM string", e);
+        }
     }
 
     /**
@@ -78,11 +128,13 @@ public class S3StorageService {
             log.warn("Could not apply S3 lifecycle rule (non-fatal): {}", e.getMessage());
         }
 
-        // Allow the frontend to fetch images directly from S3
+        // Allow the frontend to interact directly with S3:
+        //   GET  — image viewing (fallback when CloudFront is not configured)
+        //   PUT  — pre-signed upload URLs
         try {
             CORSRule corsRule = CORSRule.builder()
                     .allowedOrigins(allowedOrigins)
-                    .allowedMethods("GET")
+                    .allowedMethods("GET", "PUT")
                     .allowedHeaders("*")
                     .maxAgeSeconds(3600)
                     .build();
@@ -125,18 +177,37 @@ public class S3StorageService {
         return urls;
     }
 
+    /**
+     * Generates a signed view URL for an image.
+     * When CloudFront is configured, returns a CloudFront signed URL (CDN-cached, cheaper egress).
+     * Otherwise falls back to a direct S3 pre-signed GET URL (local dev / before CloudFront setup).
+     */
     public String generateViewUrl(String s3Key) {
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName)
-                .key(s3Key)
-                .build();
+        if (cloudFrontUtilities != null) {
+            try {
+                String resourceUrl = "https://" + cloudfrontDomain + "/" + s3Key;
+                Instant expiration = Instant.now().plus(Duration.ofHours(7));
 
-        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofHours(7)) // URL expires in 1 hour
-                .getObjectRequest(getObjectRequest)
-                .build();
+                CannedSignerRequest signerRequest = CannedSignerRequest.builder()
+                        .resourceUrl(resourceUrl)
+                        .keyPairId(cloudfrontKeyPairId)
+                        .privateKey(cloudfrontPrivateKey)
+                        .expirationDate(expiration)
+                        .build();
 
-        return presigner.presignGetObject(presignRequest).url().toString();
+                return cloudFrontUtilities.getSignedUrlWithCannedPolicy(signerRequest).url();
+            } catch (Exception e) {
+                log.error("CloudFront URL signing failed for {} — falling back to S3: {}", s3Key, e.getMessage());
+            }
+        }
+
+        // Fallback: direct S3 pre-signed URL
+        return presigner.presignGetObject(
+                software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofHours(7))
+                        .getObjectRequest(b -> b.bucket(bucketName).key(s3Key))
+                        .build()
+        ).url().toString();
     }
 
     /**
