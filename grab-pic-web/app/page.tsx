@@ -103,7 +103,7 @@ export default function Home() {
 				</div>
 
 				<p className="text-xs text-zinc-400 dark:text-zinc-500">
-					Free for up to 500 photos per album. No watermarks.
+					Free for up to 500 photos per user. No watermarks.
 				</p>
 			</section>
 

@@ -11,7 +11,10 @@
   <img src="https://img.shields.io/badge/AWS_SQS-Queue-FF4F8B?style=for-the-badge&logo=amazonsqs&logoColor=white" alt="AWS SQS" />
   <img src="https://img.shields.io/badge/AWS_ECR-Container-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white" alt="AWS ECR" />
   <img src="https://img.shields.io/badge/AWS_App_Runner-Deploy-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white" alt="AWS App Runner" />
+  <img src="https://img.shields.io/badge/AWS_CloudFront-CDN-8C4FFF?style=for-the-badge&logo=amazonaws&logoColor=white" alt="AWS CloudFront" />
   <img src="https://img.shields.io/badge/AWS_EC2-Ubuntu-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white" alt="AWS EC2" />
+  <img src="https://img.shields.io/badge/Upstash_Redis-Rate_Limiting-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Upstash Redis" />
+  <img src="https://img.shields.io/badge/Cloudflare_Turnstile-Bot_Protection-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare Turnstile" />
   <img src="https://img.shields.io/badge/Vercel-Frontend-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
   <img src="https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/DeepFace-GhostFaceNet-purple?style=for-the-badge" alt="DeepFace" />
@@ -79,7 +82,7 @@ GrabPic lets an event host upload all their photos into an album, then share a s
 
 Every photo defaults to "protected" mode, meaning it is only visible to people whose face matches a face in that photo. The host can also mark specific photos as "public" so anyone with the album link can see them. Guests can download their matched photos as a zip file directly from the browser.
 
-Free for up to 500 photos per album. No watermarks.
+Free for up to 500 photos per user (across all albums). No watermarks.
 
 ---
 
@@ -130,20 +133,32 @@ graph TD
         SupaAuth["Supabase Auth<br>(Identity Provider)"]
         S3["AWS S3<br>(Simple Storage Service)"]
         SQS["AWS SQS<br>(Simple Queue Service)"]
+        CF["AWS CloudFront<br>(CDN — optional)"]
         SupaDB["Supabase PostgreSQL<br>+ pgvector"]
+    end
+
+    subgraph "Security"
+        Redis["Upstash Redis<br>(Rate Limiting)"]
+        Turnstile["Cloudflare Turnstile<br>(Bot Protection)"]
     end
 
     Browser -->|"Load app"| Vercel
     Browser -->|"Sign in / sign up"| SupaAuth
     Browser -.->|"Upload photos<br>(presigned URL)"| S3
+    Browser -.->|"View photos"| CF
 
     Vercel -->|"Proxy /api/* calls"| AppRunner
     Vercel -->|"Proxy /api/ai/* calls"| EC2
 
     AppRunner -->|"Verify JWT"| SupaAuth
     AppRunner -->|"Generate presigned URLs"| S3
+    AppRunner -->|"Generate signed view URLs"| CF
     AppRunner -->|"Queue photo for processing"| SQS
     AppRunner -->|"Read/write album data"| SupaDB
+    AppRunner -->|"Check rate limits"| Redis
+    AppRunner -->|"Verify captcha"| Turnstile
+
+    CF -->|"Origin fetch"| S3
 
     SQS -->|"Deliver queued jobs"| EC2
     EC2 -->|"Download photos"| S3
@@ -154,11 +169,14 @@ graph TD
     style EC2 fill:#FF9900,color:#000
     style S3 fill:#569A31,color:#fff
     style SQS fill:#FF4F8B,color:#fff
+    style CF fill:#8C4FFF,color:#fff
+    style Redis fill:#DC382D,color:#fff
+    style Turnstile fill:#F38020,color:#fff
     style SupaDB fill:#3FCF8E,color:#000
     style SupaAuth fill:#3FCF8E,color:#000
 ```
 
-The system is composed of three independently deployed services that communicate through AWS SQS (async job processing) and shared access to a PostgreSQL database (Supabase) and S3 bucket. The frontend proxies all API calls through Next.js rewrites so the browser never talks directly to backend services, which keeps API URLs hidden and avoids CORS complexity.
+The system is composed of three independently deployed services that communicate through AWS SQS (async job processing) and shared access to a PostgreSQL database (Supabase) and S3 bucket. Photo viewing is served through CloudFront signed URLs when configured, falling back to S3 presigned URLs otherwise. Rate limiting is backed by Upstash Redis, and bot-sensitive endpoints are protected by Cloudflare Turnstile. The frontend proxies all API calls through Next.js rewrites so the browser never talks directly to backend services, which keeps API URLs hidden and avoids CORS complexity.
 
 ---
 
@@ -191,7 +209,8 @@ The system is composed of three independently deployed services that communicate
 | PostgreSQL Driver | (runtime)  | JDBC connectivity to Supabase Postgres         |
 | AWS SDK S3        | 2.20.0     | Presigned URL generation for uploads and views |
 | AWS SDK SQS       | 2.20.0     | Job queue messaging                            |
-| Bucket4j          | 8.14.0     | Token-bucket rate limiting                     |
+| AWS SDK CloudFront| 2.20.0     | Signed CDN URLs for photo viewing              |
+| Spring Data Redis | (via Boot) | Redis client for rate limiting (Upstash)       |
 | Lombok            | (compile)  | Boilerplate reduction                          |
 | Maven             | 3.9.6      | Build system                                   |
 
@@ -207,24 +226,28 @@ The system is composed of three independently deployed services that communicate
 | FastAPI      | 0.132.0        | HTTP API for guest selfie search                  |
 | Uvicorn      | 0.41.0         | ASGI server                                       |
 | Boto3        | 1.42.55        | AWS S3 + SQS client                               |
-| psycopg2     | 2.9.11         | Direct PostgreSQL connectivity                    |
-| SlowAPI      | 0.1.9          | Rate limiting on search endpoint                  |
+| psycopg2     | 2.9.11         | Direct PostgreSQL connectivity (connection pooled) |
+| Pillow       | (latest)       | Image validation and decompression bomb protection |
+| SlowAPI      | 0.1.9          | Rate limiting on search endpoint                   |
 | OpenCV       | 4.13.0         | Image processing                                  |
 | NumPy        | 2.2.6          | Numerical computation                             |
 | Gunicorn     | 25.1.0         | Production WSGI server                            |
 
 ### Infrastructure
 
-| Service               | Provider | Purpose                                             |
-| --------------------- | -------- | --------------------------------------------------- |
-| Vercel                | Vercel   | Frontend hosting with edge CDN                      |
-| App Runner            | AWS      | Containerized Spring Boot deployment (auto-scaling) |
-| EC2 (Ubuntu)          | AWS      | Persistent Python AI worker and FastAPI server      |
-| ECR                   | AWS      | Docker container registry for Spring Boot image     |
-| S3                    | AWS      | Object storage for event photos                     |
-| SQS                   | AWS      | Message queue decoupling upload from AI processing  |
-| PostgreSQL + pgvector | Supabase | Relational data + vector similarity search          |
-| Supabase Auth         | Supabase | Authentication (Google, GitHub, email/password)     |
+| Service               | Provider   | Purpose                                             |
+| --------------------- | ---------- | --------------------------------------------------- |
+| Vercel                | Vercel     | Frontend hosting with edge CDN                      |
+| App Runner            | AWS        | Containerized Spring Boot deployment (auto-scaling) |
+| EC2 (Ubuntu)          | AWS        | Persistent Python AI worker and FastAPI server      |
+| ECR                   | AWS        | Docker container registry for Spring Boot image     |
+| S3                    | AWS        | Object storage for event photos                     |
+| CloudFront            | AWS        | CDN for photo viewing with signed URLs (optional)   |
+| SQS                   | AWS        | Message queue decoupling upload from AI processing  |
+| Redis                 | Upstash    | Serverless rate limiting (token bucket via Lua)     |
+| Turnstile             | Cloudflare | Bot protection on sensitive endpoints               |
+| PostgreSQL + pgvector | Supabase   | Relational data + vector similarity search          |
+| Supabase Auth         | Supabase   | Authentication (Google, GitHub, email/password)     |
 
 ---
 
@@ -258,7 +281,7 @@ flowchart LR
 
 **Auth guards.** `useRequireAuth()` checks the Supabase session and redirects unauthenticated users to `/login`. `useRedirectIfAuth()` on login/signup pages sends already-authenticated users to `/dashboard`.
 
-**Download proxy.** `/api/download-proxy` fetches S3 images server-side to avoid CORS issues. It validates the target URL against an S3 domain pattern before proxying to prevent SSRF.
+**Direct image loading.** Photos are served directly from CloudFront (when configured) or S3 presigned URLs. The S3 bucket has CORS configured at startup to allow `GET` and `PUT` from the frontend origin, so no server-side proxy is needed.
 
 **Real-time updates.** When the AI worker marks a photo as `processed = true`, the album view page picks up the change through a Supabase Realtime subscription and refreshes automatically.
 
@@ -274,7 +297,7 @@ flowchart TB
         direction TB
         Controller["AlbumController<br>(@RestController)"]
         Security["SecurityConfig<br>(OAuth2 Resource Server)"]
-        RateLimit["RateLimitFilter<br>(Bucket4j)"]
+        RateLimit["RateLimitFilter<br>(Redis + Lua)"]
         S3Service["S3StorageService"]
         SqsService["SqsService"]
         Repos["PhotoRepository<br>SharedAlbumRepository<br>(Spring Data JPA)"]
@@ -293,7 +316,7 @@ flowchart TB
 
 **Security configuration** validates every incoming request (except guest endpoints) against Supabase's JWKS endpoint using ES256 signed JWTs. The `SecurityFilterChain` permits `/api/albums/*/guest/**` without authentication and requires a valid JWT for everything else. CORS is configured to only allow the frontend origin.
 
-**Rate limiting** uses Bucket4j with three separate token buckets per client IP:
+**Rate limiting** uses a Redis-backed token bucket implemented via an atomic Lua script (Upstash serverless Redis). Three separate buckets are maintained per client IP:
 
 | Endpoint Pattern         | Limit       | Window   |
 | ------------------------ | ----------- | -------- |
@@ -301,11 +324,28 @@ flowchart TB
 | `/guest/details`         | 20 requests | 1 minute |
 | `/api/*` (authenticated) | 60 requests | 1 minute |
 
+Client IP extraction uses `request.getRemoteAddr()` with Tomcat's `RemoteIpValve` (`server.forward-headers-strategy=NATIVE`) to prevent `X-Forwarded-For` spoofing. The rate limiter fails open on Redis errors so a Redis outage does not block all traffic.
+
 The `RateLimitFilter` also injects security headers on every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
 
-**S3 lifecycle management:** On startup, the `S3StorageService` applies a lifecycle rule to the S3 bucket that auto-aborts incomplete multipart uploads after 1 day. This prevents attackers from starting uploads and abandoning them to consume storage.
+**Bot protection** uses Cloudflare Turnstile on two sensitive flows:
 
-**Album quota enforcement** is applied at two layers (defense in depth): once when generating presigned upload URLs (`GET /{albumId}/upload-urls`) and again when saving photo metadata (`POST /{albumId}/photos`). The hard cap is 500 photos per album, with a maximum batch size of 50 presigned URLs per request.
+1. **Album creation** — Creating a new album requires a valid Turnstile token passed in the `X-Turnstile-Token` header. The backend verifies the token against Cloudflare's siteverify API before processing the request.
+2. **Guest search** — The "Find My Photos" button is gated behind the Turnstile widget on the client side. Guests must complete the challenge before the selfie search flow can begin.
+
+**S3 lifecycle management:** On startup, the `S3StorageService` applies a lifecycle rule to the S3 bucket that auto-aborts incomplete multipart uploads after 1 day. It also configures S3 bucket CORS to allow `GET` and `PUT` from the frontend origin, so browsers can upload and view photos directly without a server-side proxy.
+
+**CloudFront CDN:** When configured (via `CLOUDFRONT_DOMAIN`, `CLOUDFRONT_KEY_PAIR_ID`, and `CLOUDFRONT_PRIVATE_KEY_STRING`), photo view URLs are generated as CloudFront signed URLs with 7-hour expiry. This reduces S3 egress costs and serves images from edge locations closer to the user. When CloudFront is not configured, the service gracefully falls back to S3 presigned URLs.
+
+**Photo quota enforcement** is applied at two layers (defense in depth): once when generating presigned upload URLs (`POST /{albumId}/upload-urls`) and again when saving photo metadata (`POST /{albumId}/photos`). The hard cap is 500 photos per user (across all albums), with a maximum batch size of 50 presigned URLs per request.
+
+**Upload size enforcement** uses a three-layer approach:
+
+1. **Frontend validation:** Files larger than 10 MB are rejected at selection time before any upload begins.
+2. **Presigned URL signing:** The upload-urls endpoint accepts file sizes in the request body and signs `Content-Length` into each presigned PUT URL, so S3 itself rejects uploads that do not match the declared size.
+3. **Post-upload verification:** When saving photo metadata, the backend calls `HeadObject` on each S3 key to verify the object exists and is within the 10 MB limit.
+
+**Global exception handling.** A `@ControllerAdvice` (`GlobalExceptionHandler`) catches all unhandled exceptions and returns clean JSON error responses instead of Spring's default HTML error pages. Stack traces are logged via SLF4J but never exposed to the client.
 
 ---
 
@@ -352,6 +392,11 @@ DeepFace is configured with:
 - **Model:** GhostFaceNet (produces 512-dimensional face embeddings)
 - **Detector:** RetinaFace (high accuracy, handles multiple faces per image)
 - **enforce_detection:** `False` (so photos with no faces do not throw errors and are simply marked as processed with zero embeddings)
+- **Timeout:** 300-second alarm per photo via `signal.alarm` to prevent hangs on corrupted images
+
+**Decompression bomb protection.** Before passing any image to DeepFace, Pillow checks the pixel count against a 25-megapixel limit (roughly 75 MB of uncompressed RGB data). This prevents a small compressed file from expanding into gigabytes of memory and crashing the worker. Images exceeding the limit are marked as processed with zero embeddings.
+
+**Database connection pooling.** Uses `psycopg2.pool.SimpleConnectionPool` (1–2 connections) to reuse PostgreSQL connections across the polling loop instead of opening a new connection per message.
 
 Each detected face produces a 512-float embedding vector and a bounding box (`facial_area`). The embedding is formatted as a pgvector-compatible string `[0.1,0.2,...]` and inserted into `photo_embeddings`. The bounding box is stored as a JSONB column for frontend rendering of face detection overlays.
 
@@ -393,7 +438,13 @@ sequenceDiagram
 
 The selfie is written to a temp file for DeepFace and deleted in a `finally` block regardless of outcome. It is never stored.
 
+**Decompression bomb protection.** Before DeepFace processes the selfie, Pillow validates the pixel count against a 25-megapixel limit. Oversized images are rejected with a clear error.
+
 **Cosine distance matching** uses pgvector's `<=>` operator with a threshold of 0.45, which balances precision and recall. Lower values miss matches when lighting or angles differ, higher values produce false positives. Results are capped at 50 per search.
+
+**HNSW vector index.** On startup, the API creates an HNSW index on `photo_embeddings.embedding` if one does not already exist (`m=16`, `ef_construction=64`). This accelerates cosine similarity searches from linear scans to approximate nearest-neighbor lookups.
+
+**Database connection pooling.** Uses `psycopg2.pool.SimpleConnectionPool` (1–3 connections) to reuse PostgreSQL connections across requests.
 
 **Rate limiting:** 5 requests per minute per IP via SlowAPI with proxy header extraction (`X-Forwarded-For`, `X-Real-IP`).
 
@@ -489,10 +540,11 @@ sequenceDiagram
     Host->>Next: Select photos + set privacy
     Host->>Next: Click "Upload"
 
-    Next->>SB: Request upload URLs (count=N)
+    Next->>SB: Request upload URLs<br>(POST with file sizes)
     SB->>SB: Verify album ownership
-    SB->>SB: Check photo quota (max 500)
-    SB->>SB: Generate presigned upload URLs<br>(15 min expiry)
+    SB->>SB: Check photo quota (max 500 per user)
+    SB->>SB: Validate each file size ≤ 10 MB
+    SB->>SB: Generate presigned upload URLs<br>(15 min expiry, Content-Length signed)
     SB-->>Next: Presigned upload URLs
     Next-->>Host: Presigned upload URLs
 
@@ -504,6 +556,7 @@ sequenceDiagram
     Host->>Next: Save photo metadata<br>(URLs + privacy settings)
     Next->>SB: Forward save request
     SB->>SB: Re-verify ownership + quota
+    SB->>SB: HeadObject: verify each S3 object<br>exists and size ≤ 10 MB
     SB->>SB: Save photos to database
 
     loop For each PROTECTED photo
@@ -514,7 +567,7 @@ sequenceDiagram
     Next-->>Host: Success
 ```
 
-The upload flow uses a presigned URL pattern where the browser uploads directly to S3, bypassing the backend entirely for file transfer. Presigned PUT URLs expire after 15 minutes and are scoped to `content-type: image/jpeg`. The S3 key follows `albums/{albumId}/{randomUUID}.jpg`.
+The upload flow uses a presigned URL pattern where the browser uploads directly to S3, bypassing the backend entirely for file transfer. The frontend sends file sizes in the upload-urls request body, and the backend signs `Content-Length` into each presigned PUT URL so S3 rejects uploads that do not match the declared size. Presigned PUT URLs expire after 15 minutes and are scoped to `content-type: image/jpeg`. The S3 key follows `albums/{albumId}/{randomUUID}.jpg`. Before persisting photo metadata, the backend calls `HeadObject` on each uploaded key to verify the object exists and is within the 10 MB limit.
 
 Only photos marked as `PROTECTED` are sent to SQS for AI processing. Public photos skip the queue because they are visible to everyone.
 
@@ -550,18 +603,20 @@ The embedding vector is stored in PostgreSQL using the pgvector extension. pgvec
 flowchart TD
     A["Guest opens shared link"] --> B["Album loads with<br>public photos"]
     B --> C["Guest takes selfie"]
-    C --> D["Selfie sent to FastAPI"]
-    D --> E{"Face<br>detected?"}
+    C --> D{"Turnstile<br>completed?"}
+    D -->|"No"| D3["Button disabled"]
+    D -->|"Yes"| E2["Selfie sent to FastAPI"]
+    E2 --> E{"Face<br>detected?"}
     E -->|"No"| F["Error: try again"]
     E -->|"Yes"| G["Cosine search against<br>album embeddings"]
-    G --> H["Spring Boot generates<br>presigned S3 URLs"]
+    G --> H["Spring Boot generates<br>CloudFront or S3 signed URLs"]
     H --> I["Guest sees matched +<br>public photos"]
     I --> J["Download as ZIP"]
 ```
 
 **Selfie capture.** On mobile, the native camera input is triggered with `capture="user"`. On desktop, a `getUserMedia()` video stream lets the guest snap a photo that gets converted to a JPEG blob.
 
-**After matching.** The guest browses public photos and their AI-matched photos. They can select individual photos or "Select All," then download as a ZIP generated client-side with JSZip. Downloads route through the Next.js server-side proxy to avoid CORS with S3. If no face is detected (`enforce_detection=True`), the API returns a clear error instead of zero matches.
+**After matching.** The guest browses public photos and their AI-matched photos. They can select individual photos or "Select All," then download as a ZIP generated client-side with JSZip. Photos are fetched directly from CloudFront or S3 presigned URLs. If no face is detected (`enforce_detection=True`), the API returns a clear error instead of zero matches.
 
 ---
 
@@ -574,7 +629,7 @@ flowchart TD
 | `POST`   | `/api/albums`                                                    | Create a new album                                 |
 | `GET`    | `/api/albums`                                                    | List all albums owned by the authenticated user    |
 | `DELETE` | `/api/albums/{albumId}`                                          | Delete an album and all its photos/embeddings      |
-| `GET`    | `/api/albums/{albumId}/upload-urls?count=N`                      | Generate N presigned S3 PUT URLs (max 50)          |
+| `POST`   | `/api/albums/{albumId}/upload-urls`                              | Generate presigned S3 PUT URLs (max 50, file sizes in body) |
 | `POST`   | `/api/albums/{albumId}/photos`                                   | Save photo metadata after S3 upload + queue for AI |
 | `GET`    | `/api/albums/{albumId}/photos`                                   | Get all photos in album with presigned view URLs   |
 | `DELETE` | `/api/albums/{albumId}/photos/{photoId}`                         | Delete a single photo                              |
@@ -585,7 +640,7 @@ flowchart TD
 | Method | Endpoint                                     | Description                              |
 | ------ | -------------------------------------------- | ---------------------------------------- |
 | `GET`  | `/api/albums/{albumId}/guest/details`        | Get album title + public photos          |
-| `POST` | `/api/albums/{albumId}/guest/search-results` | Get presigned URLs for matched photo IDs |
+| `POST` | `/api/albums/{albumId}/guest/search-results` | Get presigned URLs for matched photo IDs (max 100) |
 
 ### AI Search Endpoint (EC2)
 
@@ -599,28 +654,35 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    L1["Supabase Auth<br>JWT issued per session"] --> L2["Spring Security<br>validates JWT signature"]
+    L0["Cloudflare Turnstile<br>bot protection on album creation<br>and guest search"] --> L1["Supabase Auth<br>JWT issued per session"]
+    L1 --> L2["Spring Security<br>validates JWT signature + issuer"]
     L2 --> L3["Ownership check<br>jwt.sub == album.hostId"]
-    L3 --> L4["Rate limiting<br>Bucket4j per IP"]
-    L4 --> L5["Input validation<br>UUID format, magic bytes,<br>size + quota limits"]
-    L5 --> L6["Transport security<br>HTTPS, HSTS, no server info"]
+    L3 --> L4["Rate limiting<br>Redis token bucket per IP"]
+    L4 --> L5["Input validation<br>UUID format, magic bytes,<br>Content-Length signed URLs,<br>HeadObject post-upload,<br>decompression bomb check"]
+    L5 --> L6["Transport security<br>HTTPS, HSTS, no server info,<br>CloudFront signed URLs"]
 ```
 
-**Authorization model:** Every authenticated endpoint extracts the user ID from the JWT `sub` claim and compares it to `album.hostId`. If they do not match, the request is rejected with HTTP 403. Guest endpoints are scoped to read-only operations on public data and face-matched data, and the search results endpoint validates that requested photo IDs actually belong to the specified album to prevent cross-album data access.
+**Authorization model:** Every authenticated endpoint extracts the user ID from the JWT `sub` claim and compares it to `album.hostId`. If they do not match, the request is rejected with HTTP 403. Guest endpoints are scoped to read-only operations on public data and face-matched data, and the search results endpoint validates that requested photo IDs actually belong to the specified album to prevent cross-album data access. Guest responses intentionally hide face detection data (`faceCount=0`, empty `faceBoxes`) so bounding box coordinates are never exposed to unauthenticated users.
 
-**Presigned URL security:** Upload URLs expire after 15 minutes and are restricted to `content-type: image/jpeg`. View URLs expire after 7 hours. Presigned URLs are generated per-request and are never stored in the database.
+**Presigned URL security:** Upload URLs expire after 15 minutes, are restricted to `content-type: image/jpeg`, and have `Content-Length` signed in to prevent size manipulation. View URLs are generated as CloudFront signed URLs (7 hours) when configured, falling back to S3 presigned URLs otherwise. Presigned URLs are generated per-request and are never stored in the database.
 
 **Infrastructure security measures:**
 
+- Global exception handler (`@ControllerAdvice`) catches all unhandled exceptions and returns clean JSON — stack traces are logged via SLF4J but never exposed
 - Stack traces, exception details, and binding errors are suppressed in API responses (`server.error.include-*=never/false`)
 - Server header is blanked (`server.server-header=`)
+- JWT issuer is validated against the configured Supabase project URL
+- Tomcat's `RemoteIpValve` (`server.forward-headers-strategy=NATIVE`) extracts real client IPs from trusted proxy headers, preventing `X-Forwarded-For` spoofing
 - Connection pool is capped at 10 connections with 10-second timeout to prevent exhaustion
 - Tomcat is limited to 100 threads with 10-second connection timeout
-- Max request body size is 10 MB
+- Max request body size is 512 KB for JSON endpoints (`RequestBodySizeLimitFilter`), preventing memory exhaustion from oversized payloads — actual photos go directly to S3 via presigned URLs
+- Upload size enforced at three layers: frontend validation (10 MB), Content-Length signed into presigned URLs, and HeadObject verification before database persistence — if any photo in a batch fails validation, already-uploaded S3 objects are cleaned up
+- Decompression bomb protection: Pillow validates pixel count (25 MP limit) before DeepFace processes any image
 - S3 lifecycle rule auto-aborts abandoned multipart uploads after 1 day
-- Download proxy validates URLs against S3 domain pattern to prevent SSRF
+- S3 bucket CORS configured at startup to restrict `GET`/`PUT` to the frontend origin only
+- Cloudflare Turnstile on album creation (server-verified) and guest search (client-side gate) to block bots
 - Guest selfies are never persisted to disk (temp file deleted in `finally` block)
-- CORS is restricted to the frontend origin only
+- CORS is restricted to the frontend origin via both Spring Security and S3 bucket policy
 
 ---
 
@@ -637,6 +699,7 @@ graph TD
         WORKER["Python Worker<br>(EC2)"]
         API["FastAPI Search API<br>(EC2)"]
         BUCKET["S3<br>(Simple Storage Service)"]
+        CF["CloudFront<br>(CDN — optional)"]
         QUEUE["SQS<br>(Simple Queue Service)"]
     end
 
@@ -645,12 +708,21 @@ graph TD
         AUTH["Auth Service"]
     end
 
+    subgraph "External Services"
+        REDIS["Upstash Redis<br>(Rate Limiting)"]
+        TURNSTILE["Cloudflare Turnstile<br>(Bot Protection)"]
+    end
+
     FE -->|"Proxy API calls"| BE
     FE -->|"Proxy AI calls"| API
     FE -->|"Auth requests"| AUTH
-    BE -->|"Generate upload/view URLs"| BUCKET
+    BE -->|"Generate upload URLs"| BUCKET
+    BE -->|"Generate signed view URLs"| CF
+    CF -->|"Origin fetch"| BUCKET
     BE -->|"Queue photo jobs"| QUEUE
     BE -->|"Read/write album data"| DB
+    BE -->|"Check rate limits"| REDIS
+    BE -->|"Verify captcha"| TURNSTILE
     QUEUE -->|"Deliver jobs"| WORKER
     WORKER -->|"Download photos"| BUCKET
     WORKER -->|"Store embeddings"| DB
@@ -661,14 +733,17 @@ graph TD
     style WORKER fill:#3776AB,color:#fff
     style API fill:#3776AB,color:#fff
     style BUCKET fill:#569A31,color:#fff
+    style CF fill:#8C4FFF,color:#fff
     style QUEUE fill:#FF4F8B,color:#fff
+    style REDIS fill:#DC382D,color:#fff
+    style TURNSTILE fill:#F38020,color:#fff
     style DB fill:#3FCF8E,color:#000
     style AUTH fill:#3FCF8E,color:#000
 ```
 
 ### Frontend Deployment (Vercel)
 
-Deployed on Vercel with automatic Git deploys, edge CDN, HTTPS, and serverless function support for the download proxy. Environment variables are configured in the Vercel dashboard.
+Deployed on Vercel with automatic Git deploys, edge CDN, and HTTPS. Environment variables are configured in the Vercel dashboard.
 
 Live URL: **https://grab-pic.vercel.app/**
 
@@ -719,9 +794,6 @@ grab-pic/
 │   │   │       └── view/page.tsx    # Album viewer (face overlays, share, QR, bulk download)
 │   │   ├── albums/[id]/
 │   │   │   └── guest/page.tsx       # Guest page (selfie camera, AI search, zip download)
-│   │   └── api/
-│   │       └── download-proxy/
-│   │           └── route.ts         # Server-side S3 image proxy
 │   ├── components/
 │   │   ├── GrabPicLogo.tsx          # SVG brand mark
 │   │   ├── Navbar.tsx               # Responsive nav with auth state
@@ -730,7 +802,7 @@ grab-pic/
 │   ├── lib/
 │   │   ├── api.ts                   # Authenticated fetch wrapper (injects JWT)
 │   │   ├── supabase.ts              # Supabase client initialization
-│   │   ├── download.ts              # Image download + proxy helpers
+│   │   ├── download.ts              # Direct image download from S3/CloudFront
 │   │   ├── useRequireAuth.ts        # Auth guard hooks
 │   │   └── utils.ts                 # Tailwind class merge utility
 │   ├── next.config.ts               # API rewrite rules (proxy to backend + AI)
@@ -742,14 +814,17 @@ grab-pic/
 │   │   ├── ApiApplication.java      # Spring Boot entry point
 │   │   ├── config/
 │   │   │   ├── SecurityConfig.java  # OAuth2 JWT validation, CORS, security headers
-│   │   │   └── RateLimitFilter.java # Bucket4j token-bucket rate limiter
+│   │   │   ├── RateLimitFilter.java # Redis-backed token-bucket rate limiter
+│   │   │   ├── RequestBodySizeLimitFilter.java # 512 KB limit on JSON request bodies
+│   │   │   └── GlobalExceptionHandler.java # Clean JSON error responses (@ControllerAdvice)
 │   │   ├── controller/
 │   │   │   └── AlbumController.java # All REST endpoints (albums, photos, guest)
 │   │   ├── dto/
 │   │   │   ├── AlbumCreateRequest.java
 │   │   │   ├── AlbumResponse.java
 │   │   │   ├── PhotoResponse.java
-│   │   │   └── PhotoSaveRequest.java
+│   │   │   ├── PhotoSaveRequest.java
+│   │   │   └── UploadUrlRequest.java # File sizes for presigned URL generation
 │   │   ├── model/
 │   │   │   ├── AccessMode.java      # PUBLIC | PROTECTED enum
 │   │   │   ├── Photo.java           # Photo entity (JPA)
@@ -759,8 +834,9 @@ grab-pic/
 │   │   │   ├── PhotoRepository.java
 │   │   │   └── SharedAlbumRepository.java
 │   │   └── service/
-│   │       ├── S3StorageService.java # Presigned URL generation + lifecycle rules
-│   │       └── SqsService.java      # SQS message publishing
+│   │       ├── S3StorageService.java # Presigned URLs, CloudFront signed URLs, CORS, lifecycle
+│   │       ├── SqsService.java      # SQS message publishing
+│   │       └── TurnstileService.java # Cloudflare Turnstile verification
 │   ├── src/main/resources/
 │   │   └── application.properties   # DB, S3, SQS, Supabase config (env vars)
 │   ├── Dockerfile                   # Multi-stage build (Maven + JRE 21)
@@ -798,6 +874,7 @@ echo 'NEXT_PUBLIC_API_URL=http://localhost:8080' >> .env.local
 echo 'NEXT_PUBLIC_AI_API_URL=http://localhost:5000' >> .env.local
 echo 'NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>' >> .env.local
 echo 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-supabase-anon-key>' >> .env.local
+echo 'NEXT_PUBLIC_TURNSTILE_SITE_KEY=<your-turnstile-site-key>' >> .env.local
 
 npm run dev
 # Runs on http://localhost:3000
@@ -813,10 +890,21 @@ export DB_URL=jdbc:postgresql://<host>:5432/<database>
 export DB_USERNAME=<user>
 export DB_PASSWORD=<password>
 export AWS_REGION=us-east-2
+export AWS_ACCESS_KEY=<your-aws-access-key>
+export AWS_SECRET_KEY=<your-aws-secret-key>
 export AWS_BUCKET_NAME=<your-bucket>
 export AWS_SQS_URL=<your-sqs-queue-url>
 export SUPABASE_VERIFY=<your-supabase-jwks-url>
+export SUPABASE_JWT_ISSUER=<your-supabase-jwt-issuer-url>
 export CORS_ALLOWED_ORIGINS=http://localhost:3000
+export REDIS_URL=redis://localhost:6379
+# Optional: Turnstile bot protection (if blank, all requests are allowed — convenient for local dev)
+export TURNSTILE_SECRET=<your-turnstile-secret>
+
+# Optional: CloudFront CDN (omit for local dev — falls back to S3 presigned URLs)
+# export CLOUDFRONT_DOMAIN=<your-distribution>.cloudfront.net
+# export CLOUDFRONT_KEY_PAIR_ID=<your-key-pair-id>
+# export CLOUDFRONT_PRIVATE_KEY_STRING=<base64-encoded-PEM-private-key>
 
 ./mvnw spring-boot:run
 # Runs on http://localhost:8080
@@ -862,22 +950,32 @@ python api.py
 | `NEXT_PUBLIC_API_URL`                  | Spring Boot backend URL       |
 | `NEXT_PUBLIC_AI_API_URL`               | Python FastAPI URL            |
 | `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL          |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous/public key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous/public key      |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Cloudflare Turnstile site key      |
 
 ### Backend (`api/application.properties` via env vars)
 
-| Variable               | Description                            |
-| ---------------------- | -------------------------------------- |
-| `PORT`                 | Server port (default: 8080)            |
-| `DB_URL`               | JDBC connection string for PostgreSQL  |
-| `DB_USERNAME`          | Database username                      |
-| `DB_PASSWORD`          | Database password                      |
-| `DDL_AUTO`             | Hibernate DDL mode (default: validate) |
-| `AWS_REGION`           | AWS region for S3 and SQS              |
-| `AWS_BUCKET_NAME`      | S3 bucket name                         |
-| `AWS_SQS_URL`          | SQS queue URL                          |
-| `SUPABASE_VERIFY`      | Supabase JWKS URL for JWT validation   |
-| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins        |
+| Variable                       | Description                                              |
+| ------------------------------ | -------------------------------------------------------- |
+| `PORT`                         | Server port (default: 8080)                              |
+| `DB_URL`                       | JDBC connection string for PostgreSQL                    |
+| `DB_USERNAME`                  | Database username                                        |
+| `DB_PASSWORD`                  | Database password                                        |
+| `DDL_AUTO`                     | Hibernate DDL mode (default: validate)                   |
+| `AWS_REGION`                   | AWS region for S3, SQS, and CloudFront                   |
+| `AWS_ACCESS_KEY`               | AWS access key ID for S3/SQS/CloudFront                  |
+| `AWS_SECRET_KEY`               | AWS secret access key                                    |
+| `AWS_BUCKET_NAME`              | S3 bucket name                                           |
+| `AWS_SQS_URL`                  | SQS queue URL                                            |
+| `SUPABASE_VERIFY`              | Supabase JWKS URL for JWT validation                     |
+| `SUPABASE_JWT_ISSUER`          | Supabase JWT issuer URL for issuer claim validation      |
+| `CORS_ALLOWED_ORIGINS`         | Comma-separated allowed origins                          |
+| `REDIS_URL`                    | Redis connection URL (default: redis://localhost:6379)    |
+| `REDIS_SSL`                    | Enable SSL for Redis connection (default: false)         |
+| `TURNSTILE_SECRET`             | Cloudflare Turnstile secret key for bot protection       |
+| `CLOUDFRONT_DOMAIN`            | CloudFront distribution domain (optional)                |
+| `CLOUDFRONT_KEY_PAIR_ID`       | CloudFront key pair ID for signed URLs (optional)        |
+| `CLOUDFRONT_PRIVATE_KEY_STRING`| PEM private key string for CloudFront signing (optional) |
 
 ### AI Worker (`ai-face-worker/.env`)
 
@@ -912,5 +1010,5 @@ GrabPic is designed for any scenario where photos are taken of groups of people 
 ---
 
 <p align="center">
-  <sub>Built with Next.js, Spring Boot, Python, DeepFace, PostgreSQL + pgvector, AWS, and Supabase.</sub>
+  <sub>Built with Next.js, Spring Boot, Python, DeepFace, PostgreSQL + pgvector, AWS (S3, SQS, CloudFront, App Runner, EC2), Upstash Redis, Cloudflare Turnstile, and Supabase.</sub>
 </p>

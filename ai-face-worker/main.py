@@ -134,7 +134,7 @@ def process_message(message):
         
         try:
             for face in valid_faces:
-                # convert the list of 4096 numbers into a string so PostgreSQL pgvector accepts it
+                # convert the list of 512 numbers into a string so PostgreSQL pgvector accepts it
                 embedding_str = f"[{','.join(map(str, face['embedding']))}]"
                 box_area_json = json.dumps(face['facial_area'])
                 
