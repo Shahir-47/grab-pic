@@ -364,8 +364,19 @@ public class AlbumController {
                 return ResponseEntity.badRequest().body("Photo does not belong to this album");
             }
 
-            photo.setAccessMode(makePublic ? AccessMode.PUBLIC : AccessMode.PROTECTED);
+            AccessMode previousMode = photo.getAccessMode();
+            AccessMode nextMode = makePublic ? AccessMode.PUBLIC : AccessMode.PROTECTED;
+
+            photo.setAccessMode(nextMode);
             photoRepository.save(photo);
+
+            // If a photo was uploaded as public (thus skipped by AI) and is later protected,
+            // enqueue it so face embeddings can be generated.
+            if (previousMode == AccessMode.PUBLIC
+                    && nextMode == AccessMode.PROTECTED
+                    && !photo.isProcessed()) {
+                sqsService.sendPhotoForProcessing(photo.getId().toString(), photo.getStorageUrl());
+            }
 
             return ResponseEntity.ok().body("Privacy updated.");
         } catch (Exception e) {
