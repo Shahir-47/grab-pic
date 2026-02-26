@@ -1,5 +1,6 @@
 import os
 import re
+import signal
 import tempfile
 import psycopg2
 from fastapi import FastAPI, UploadFile, File, Form, Request
@@ -10,6 +11,15 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from deepface import DeepFace
 from dotenv import load_dotenv
+
+# --- Timeout for guest-facing DeepFace search ---
+DEEPFACE_TIMEOUT_SECS = 180
+
+class DeepFaceTimeout(Exception):
+    """Raised when DeepFace processing exceeds the allowed time."""
+
+def _timeout_handler(signum, frame):
+    raise DeepFaceTimeout("DeepFace processing timed out")
 
 load_dotenv()
 
@@ -118,16 +128,28 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
     temp_file.close()
 
     try:
-        # Extract the 128-D facial embedding from the selfie
+        # Extract the facial embedding from the selfie (with strict timeout)
         try:
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(DEEPFACE_TIMEOUT_SECS)
             faces = DeepFace.represent(
                 img_path=temp_file.name,
                 model_name="GhostFaceNet",
                 detector_backend="retinaface",
                 enforce_detection=True
             )
+            signal.alarm(0)  # cancel alarm on success
+        except DeepFaceTimeout:
+            signal.alarm(0)
+            return JSONResponse(
+                content={"error": "Face analysis timed out. Please try a clearer photo."},
+                status_code=408
+            )
         except ValueError:
+            signal.alarm(0)
             return JSONResponse(content={"error": "No face detected in selfie. Please try again."}, status_code=400)
+        finally:
+            signal.alarm(0)  # always disarm
 
         # Grab the mathematical embedding of the first face found in the selfie
         embedding = faces[0]["embedding"]

@@ -1,9 +1,19 @@
 import os
 import json
+import signal
 import boto3
 import psycopg2
 from deepface import DeepFace
 from dotenv import load_dotenv
+
+# --- Timeout for DeepFace processing ---
+DEEPFACE_TIMEOUT_SECS = 300
+
+class DeepFaceTimeout(Exception):
+    """Raised when DeepFace processing exceeds the allowed time."""
+
+def _timeout_handler(signum, frame):
+    raise DeepFaceTimeout("DeepFace processing timed out")
 
 load_dotenv()
 
@@ -58,17 +68,25 @@ def process_message(message):
         s3.download_file(BUCKET_NAME, storage_url, local_path)
         print("    -> Downloaded from S3")
         
-        #  Run DeepFace
+        #  Run DeepFace 
         try:
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(DEEPFACE_TIMEOUT_SECS)
             faces = DeepFace.represent(
                 img_path=local_path, 
                 model_name="GhostFaceNet",
                 detector_backend="retinaface",
                 enforce_detection=False 
             )
+            signal.alarm(0)  # cancel alarm on success
+        except DeepFaceTimeout:
+            print(f"    -> DeepFace TIMED OUT after {DEEPFACE_TIMEOUT_SECS}s — skipping photo")
+            faces = []
         except Exception as e:
             print(f"    -> DeepFace Error: {e}")
             faces = []
+        finally:
+            signal.alarm(0)  # always disarm
             
         # DeepFace returns a list of dictionaries, one for each face found
         valid_faces = [f for f in faces if f.get('facial_area', {}).get('w', 0) > 0]
