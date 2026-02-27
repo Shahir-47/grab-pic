@@ -942,6 +942,12 @@ TURNSTILE_ALLOWED_HOSTNAMES=grab-pic.vercel.app,localhost
 # Optional: face search tuning
 FACE_SEARCH_MATCH_THRESHOLD=0.70
 FACE_SEARCH_MAX_RESULTS=200
+# Optional: maximize recall (find more candidates across difficult lighting/angles/looks)
+FACE_SEARCH_HIGH_RECALL=false
+# Optional: how many detected selfie faces to query (default 1, or 3 in high-recall mode)
+FACE_SEARCH_QUERY_MAX_FACES=1
+# Optional: require strict selfie face detection before searching (default true, or false in high-recall mode)
+FACE_SEARCH_SELFIE_ENFORCE_DETECTION=true
 EOF
 
 # Start the SQS worker
@@ -1011,6 +1017,9 @@ Use base URLs only for `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_AI_API_URL` (no `/
 | `TURNSTILE_ALLOWED_HOSTNAMES` | Optional comma-separated Turnstile hostname allowlist (recommended in prod) |
 | `FACE_SEARCH_MATCH_THRESHOLD` | Cosine distance threshold for selfie matches (default: 0.70) |
 | `FACE_SEARCH_MAX_RESULTS` | Maximum number of matched photo IDs returned by AI search (default: 200) |
+| `FACE_SEARCH_HIGH_RECALL` | Optional: `true` to favor recall over precision (looser defaults for threshold/results and selfie detection) |
+| `FACE_SEARCH_QUERY_MAX_FACES` | Optional: number of detected selfie faces to query and merge (default: 1; default becomes 3 in high-recall mode) |
+| `FACE_SEARCH_SELFIE_ENFORCE_DETECTION` | Optional: strict selfie face enforcement before search (default: `true`; default becomes `false` in high-recall mode) |
 
 ---
 

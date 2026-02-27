@@ -37,8 +37,42 @@ def _env_int(name: str, default: int) -> int:
     except ValueError:
         return default
 
-FACE_SEARCH_MATCH_THRESHOLD = max(0.0, min(1.0, _env_float("FACE_SEARCH_MATCH_THRESHOLD", 0.70)))
-FACE_SEARCH_MAX_RESULTS = max(1, _env_int("FACE_SEARCH_MAX_RESULTS", 200))
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+FACE_SEARCH_HIGH_RECALL = _env_bool("FACE_SEARCH_HIGH_RECALL", False)
+FACE_SEARCH_MATCH_THRESHOLD = max(
+    0.0,
+    min(
+        1.0,
+        _env_float(
+            "FACE_SEARCH_MATCH_THRESHOLD",
+            0.90 if FACE_SEARCH_HIGH_RECALL else 0.70,
+        ),
+    ),
+)
+FACE_SEARCH_MAX_RESULTS = max(
+    1,
+    _env_int("FACE_SEARCH_MAX_RESULTS", 500 if FACE_SEARCH_HIGH_RECALL else 200),
+)
+FACE_SEARCH_QUERY_MAX_FACES = max(
+    1,
+    _env_int("FACE_SEARCH_QUERY_MAX_FACES", 3 if FACE_SEARCH_HIGH_RECALL else 1),
+)
+FACE_SEARCH_SELFIE_ENFORCE_DETECTION = _env_bool(
+    "FACE_SEARCH_SELFIE_ENFORCE_DETECTION",
+    not FACE_SEARCH_HIGH_RECALL,
+)
+
+
+def _face_area(face: dict) -> int:
+    facial_area = face.get("facial_area") or {}
+    width = int(facial_area.get("w", 0) or 0)
+    height = int(facial_area.get("h", 0) or 0)
+    return max(0, width) * max(0, height)
 
 class DeepFaceTimeout(Exception):
     pass
@@ -216,7 +250,7 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
                 img_path=temp_file.name,
                 model_name="GhostFaceNet",
                 detector_backend="retinaface",
-                enforce_detection=True
+                enforce_detection=FACE_SEARCH_SELFIE_ENFORCE_DETECTION
             )
             signal.alarm(0)
         except DeepFaceTimeout:
@@ -231,9 +265,14 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
         finally:
             signal.alarm(0)
 
-        embedding = faces[0]["embedding"]
-        
-        embedding_str = f"[{','.join(map(str, embedding))}]"
+        candidate_faces = [f for f in faces if f.get("embedding")]
+        if not candidate_faces:
+            return JSONResponse(content={"error": "No face detected in selfie. Please try again."}, status_code=400)
+
+        candidate_faces.sort(key=_face_area, reverse=True)
+        query_embeddings = [
+            f["embedding"] for f in candidate_faces[:FACE_SEARCH_QUERY_MAX_FACES]
+        ]
 
         conn = db_pool.getconn()
         try:
@@ -247,24 +286,32 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
                 GROUP BY p.id
                 HAVING MIN(pe.embedding <=> %s) <= %s
                 ORDER BY best_distance ASC
-                LIMIT %s;
             """
-            cur.execute(
-                query,
-                (
-                    embedding_str,
-                    album_id,
-                    embedding_str,
-                    FACE_SEARCH_MATCH_THRESHOLD,
-                    FACE_SEARCH_MAX_RESULTS,
-                ),
-            )
-            results = cur.fetchall()
+            best_by_photo_id: dict[str, float] = {}
+            for embedding in query_embeddings:
+                embedding_str = f"[{','.join(map(str, embedding))}]"
+                cur.execute(
+                    query,
+                    (
+                        embedding_str,
+                        album_id,
+                        embedding_str,
+                        FACE_SEARCH_MATCH_THRESHOLD,
+                    ),
+                )
+                for photo_id, best_distance in cur.fetchall():
+                    key = str(photo_id)
+                    if key not in best_by_photo_id or best_distance < best_by_photo_id[key]:
+                        best_by_photo_id[key] = best_distance
+
+            results = sorted(best_by_photo_id.items(), key=lambda item: item[1])[
+                :FACE_SEARCH_MAX_RESULTS
+            ]
             cur.close()
         finally:
             db_pool.putconn(conn)
 
-        photo_ids = [str(r[0]) for r in results]
+        photo_ids = [photo_id for photo_id, _ in results]
         
         print(f"Guest search complete! Found {len(photo_ids)} matching photos.")
         return {"matched_photo_ids": photo_ids}
