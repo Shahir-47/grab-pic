@@ -223,7 +223,7 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
                 FROM photo_embeddings pe
                 JOIN photos p ON p.id = pe.photo_id
                 WHERE p.album_id = %s
-                  AND pe.embedding <=> %s <= 0.50
+                  AND pe.embedding <=> %s <= 0.60
                 ORDER BY distance ASC
                 LIMIT 50;
             """
