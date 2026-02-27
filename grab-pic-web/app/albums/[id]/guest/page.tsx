@@ -35,6 +35,13 @@ export default function GuestWelcomePage() {
 	const albumId = params?.id || "";
 	const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 	const isTurnstileEnabled = Boolean(turnstileSiteKey);
+	const selfieUploadModeFlag =
+		process.env.NEXT_PUBLIC_DEMO_SELFIE_UPLOAD?.toLowerCase() ?? "";
+	const isSelfieUploadMode =
+		selfieUploadModeFlag === "true" ||
+		selfieUploadModeFlag === "1" ||
+		selfieUploadModeFlag === "yes" ||
+		selfieUploadModeFlag === "on";
 	const aiServiceBaseUrl =
 		process.env.NEXT_PUBLIC_AI_API_URL?.replace(/\/+$/, "") ?? "";
 	const aiSearchEndpoint = aiServiceBaseUrl
@@ -61,6 +68,7 @@ export default function GuestWelcomePage() {
 	const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
 
 	const [isMobile, setIsMobile] = useState(true);
+	const shouldUseFilePicker = isMobile || isSelfieUploadMode;
 	const [isCameraOpen, setIsCameraOpen] = useState(false);
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const streamRef = useRef<MediaStream | null>(null);
@@ -394,7 +402,7 @@ export default function GuestWelcomePage() {
 									size="sm"
 									onClick={() => {
 										setSelfie(null);
-										if (!isMobile) startDesktopCamera();
+										if (!isMobile && !isSelfieUploadMode) startDesktopCamera();
 									}}
 									className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
 								>
@@ -403,11 +411,13 @@ export default function GuestWelcomePage() {
 							</div>
 						) : (
 							<div className="relative group cursor-pointer">
-								{isMobile ? (
+								{shouldUseFilePicker ? (
 									<input
 										type="file"
 										accept="image/*"
-										capture="user"
+										{...(!isSelfieUploadMode && isMobile
+											? { capture: "user" as const }
+											: {})}
 										onChange={handleMobileSelfieSelect}
 										className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
 									/>
@@ -420,7 +430,7 @@ export default function GuestWelcomePage() {
 
 								<div className="border-2 border-dashed border-violet-200 dark:border-violet-800 rounded-2xl p-8 bg-white dark:bg-zinc-800 group-hover:bg-violet-50 dark:group-hover:bg-violet-950 transition-all flex flex-col items-center justify-center gap-3">
 									<div className="p-3 bg-violet-100 dark:bg-violet-900 rounded-full text-violet-600 dark:text-violet-400">
-										{isMobile ? (
+										{shouldUseFilePicker ? (
 											<Upload className="w-6 h-6" />
 										) : (
 											<Video className="w-6 h-6" />
@@ -428,8 +438,10 @@ export default function GuestWelcomePage() {
 									</div>
 									<div className="text-center">
 										<p className="text-sm font-bold text-zinc-700 dark:text-zinc-200">
-											{isMobile
-												? "Tap to open camera"
+											{shouldUseFilePicker
+												? isMobile
+													? "Tap to upload a selfie"
+													: "Click to upload a selfie"
 												: "Click to take a selfie"}
 										</p>
 										<p className="text-xs text-zinc-400 mt-1">

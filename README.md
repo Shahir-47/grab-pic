@@ -876,6 +876,8 @@ echo 'NEXT_PUBLIC_AI_API_URL=http://localhost:5000' >> .env.local
 echo 'NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>' >> .env.local
 echo 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-supabase-anon-key>' >> .env.local
 echo 'NEXT_PUBLIC_TURNSTILE_SITE_KEY=<your-turnstile-site-key>' >> .env.local
+# Optional demo/dev mode: allow file upload instead of camera capture for guest selfie search
+echo 'NEXT_PUBLIC_DEMO_SELFIE_UPLOAD=false' >> .env.local
 
 npm run dev
 # Runs on http://localhost:3000
@@ -963,6 +965,7 @@ python api.py
 | `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL          |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous/public key      |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Cloudflare Turnstile site key      |
+| `NEXT_PUBLIC_DEMO_SELFIE_UPLOAD`       | Optional: `true` to use file upload for guest selfie search instead of camera capture |
 
 Use base URLs only for `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_AI_API_URL` (no `/api` suffix, no trailing slash).
 
