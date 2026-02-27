@@ -35,16 +35,20 @@
 <br/>
 
 <!-- VIDEO / DEMO -->
-<p align="center">
-  <em>[ Video demo placeholder ]</em>
-</p>
+https://github.com/user-attachments/assets/67c5376e-39d9-4dd9-8229-2897f79ab3db
+
 
 <br/>
 
 <!-- SCREENSHOT -->
-<p align="center">
-  <em>[ App screenshot placeholder ]</em>
-</p>
+<img width="1286" height="766" alt="image" src="https://github.com/user-attachments/assets/0d4010db-7940-4c3f-81ba-29da6f954017" />
+<img width="1140" height="559" alt="image" src="https://github.com/user-attachments/assets/2ad064b9-522a-4b6c-82e0-ad3afc95a900" />
+<img width="1114" height="724" alt="image" src="https://github.com/user-attachments/assets/d7a1fdf9-94f4-4976-a0d5-dfe834a91207" />
+<img width="1005" height="815" alt="image" src="https://github.com/user-attachments/assets/10f76adc-af69-4466-9bfc-7685e5df81c3" />
+<img width="1268" height="498" alt="image" src="https://github.com/user-attachments/assets/e18eecde-2284-4ea8-bb88-a0a4b9d73d0b" />
+<img width="1320" height="570" alt="image" src="https://github.com/user-attachments/assets/f8ac1745-46ce-4a5f-9350-12be77588567" />
+<img width="1792" height="907" alt="image" src="https://github.com/user-attachments/assets/f323dd36-95b9-4845-bf70-eab0ee2d4652" />
+
 
 ---
 
