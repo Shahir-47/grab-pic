@@ -177,7 +177,12 @@ export default function GuestWelcomePage() {
 	};
 
 	const handleDownloadSingle = async (photo: Photo) => {
-		await downloadImage(photo.viewUrl, `grabpic-${photo.id}.jpg`);
+		try {
+			await downloadImage(photo.viewUrl, `grabpic-${photo.id}.jpg`);
+		} catch (error) {
+			console.error("Single photo download failed:", error);
+			alert("Failed to download photo.");
+		}
 	};
 
 	const toggleGuestSelect = (photoId: string) => {

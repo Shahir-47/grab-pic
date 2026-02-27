@@ -972,6 +972,7 @@ python api.py
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous/public key      |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Cloudflare Turnstile site key      |
 | `NEXT_PUBLIC_DEMO_SELFIE_UPLOAD`       | Optional: `true` to use file upload for guest selfie search instead of camera capture |
+| `IMAGE_PROXY_ALLOWED_HOSTS`            | Optional: comma-separated host allowlist for same-origin image proxy used by ZIP/single-photo downloads (default: `amazonaws.com,cloudfront.net,sslip.io,localhost,127.0.0.1`) |
 
 Use base URLs only for `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_AI_API_URL` (no `/api` suffix, no trailing slash).
 

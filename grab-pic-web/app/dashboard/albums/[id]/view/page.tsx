@@ -270,10 +270,12 @@ export default function AlbumViewPage() {
 
 	const handleDownload = async () => {
 		if (!selectedPhoto) return;
-		await downloadImage(
-			selectedPhoto.viewUrl,
-			`grabpic-${selectedPhoto.id}.jpg`,
-		);
+		try {
+			await downloadImage(selectedPhoto.viewUrl, `grabpic-${selectedPhoto.id}.jpg`);
+		} catch (error) {
+			console.error("Single photo download failed:", error);
+			alert("Failed to download photo.");
+		}
 	};
 
 	const handleDeleteSingle = async () => {
