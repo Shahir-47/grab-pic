@@ -79,6 +79,7 @@ public class AlbumController {
     private static final int MAX_UPLOAD_BATCH = 50;
     private static final long MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024;
     private static final long MAX_PHOTOS_PER_USER = 500;
+    private static final int MAX_GUEST_SEARCH_RESULTS_IDS = 500;
     private static final String QUOTA_MSG =
             "You have reached the maximum of " + MAX_PHOTOS_PER_USER
             + " photos. Please delete old photos to free up space, "
@@ -193,7 +194,6 @@ public class AlbumController {
         photoRepository.saveAll(photosToSave);
 
         List<SqsService.PhotoMessage> sqsMessages = photosToSave.stream()
-                .filter(p -> p.getAccessMode() == AccessMode.PROTECTED)
                 .map(p -> new SqsService.PhotoMessage(p.getId().toString(), p.getStorageUrl()))
                 .toList();
         sqsService.sendPhotosForProcessingBatch(sqsMessages);
@@ -370,8 +370,9 @@ public class AlbumController {
         if (photoIds == null || photoIds.isEmpty()) {
             return ResponseEntity.badRequest().body("No photo IDs provided.");
         }
-        if (photoIds.size() > 100) {
-            return ResponseEntity.badRequest().body("Too many photo IDs. Maximum is 100.");
+        if (photoIds.size() > MAX_GUEST_SEARCH_RESULTS_IDS) {
+            return ResponseEntity.badRequest()
+                    .body("Too many photo IDs. Maximum is " + MAX_GUEST_SEARCH_RESULTS_IDS + ".");
         }
 
         Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
@@ -397,5 +398,29 @@ public class AlbumController {
             }
         }
         return ResponseEntity.ok(matchedPhotos);
+    }
+
+    @PostMapping("/{albumId}/photos/backfill-processing")
+    public ResponseEntity<?> backfillPhotoProcessing(@PathVariable UUID albumId,
+                                                     @AuthenticationPrincipal Jwt jwt) {
+        Optional<SharedAlbum> albumOpt = albumRepository.findById(albumId);
+        if (albumOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (!albumOpt.get().getHostId().equals(jwt.getSubject())) {
+            return ResponseEntity.status(403).body("You do not own this album.");
+        }
+
+        List<Photo> albumPhotos = photoRepository.findByAlbumId(albumId);
+        List<SqsService.PhotoMessage> unprocessed = albumPhotos.stream()
+                .filter(photo -> !photo.isProcessed())
+                .map(photo -> new SqsService.PhotoMessage(photo.getId().toString(), photo.getStorageUrl()))
+                .toList();
+
+        sqsService.sendPhotosForProcessingBatch(unprocessed);
+        return ResponseEntity.ok().body(
+                java.util.Map.of(
+                        "queued", unprocessed.size(),
+                        "albumId", albumId.toString()
+                )
+        );
     }
 }

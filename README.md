@@ -104,7 +104,7 @@ flowchart LR
 
 The three-step process from the user's perspective:
 
-**Step 1: Upload.** The host creates an album, selects photos, and marks each one as "public" (anyone with the link sees it) or "protected" (only people whose face is in the photo can see it). Protected is the default. Photos go straight to cloud storage, and the protected ones get queued for AI processing automatically. If a photo is uploaded as public and later switched to protected, it is queued at toggle time (when still unprocessed).
+**Step 1: Upload.** The host creates an album, selects photos, and marks each one as "public" (anyone with the link sees it) or "protected" (only people whose face is in the photo can see it). Protected is the default. Photos go straight to cloud storage, and every uploaded photo is queued for AI processing automatically so selfie search can still find people in both public and protected photos.
 
 **Step 2: AI scans every face.** A background worker picks up each protected photo, detects every face in it, and stores a mathematical fingerprint (a 512-dimensional vector) for each face in the database.
 
@@ -631,6 +631,7 @@ flowchart TD
 | `DELETE` | `/api/albums/{albumId}`                                          | Delete an album and all its photos/embeddings      |
 | `POST`   | `/api/albums/{albumId}/upload-urls`                              | Generate presigned S3 PUT URLs (max 50, file sizes in body) |
 | `POST`   | `/api/albums/{albumId}/photos`                                   | Save photo metadata after S3 upload + queue for AI |
+| `POST`   | `/api/albums/{albumId}/photos/backfill-processing`               | Queue all unprocessed photos in album for AI processing |
 | `GET`    | `/api/albums/{albumId}/photos`                                   | Get all photos in album with presigned view URLs   |
 | `DELETE` | `/api/albums/{albumId}/photos/{photoId}`                         | Delete a single photo                              |
 | `PUT`    | `/api/albums/{albumId}/photos/{photoId}/privacy?makePublic=bool` | Toggle photo privacy (`PUBLIC` -> `PROTECTED` auto-queues unprocessed photos) |
@@ -640,7 +641,7 @@ flowchart TD
 | Method | Endpoint                                     | Description                              |
 | ------ | -------------------------------------------- | ---------------------------------------- |
 | `GET`  | `/api/albums/{albumId}/guest/details`        | Get album title + public photos          |
-| `POST` | `/api/albums/{albumId}/guest/search-results` | Get presigned URLs for matched photo IDs (max 100) |
+| `POST` | `/api/albums/{albumId}/guest/search-results` | Get presigned URLs for matched photo IDs (max 500) |
 
 ### AI Search Endpoint (EC2)
 
@@ -936,6 +937,9 @@ ALLOWED_ORIGINS=http://localhost:3000
 TURNSTILE_SECRET=<your-turnstile-secret>
 # Optional but recommended in production: restrict accepted Turnstile hostnames
 TURNSTILE_ALLOWED_HOSTNAMES=grab-pic.vercel.app,localhost
+# Optional: face search tuning
+FACE_SEARCH_MATCH_THRESHOLD=0.70
+FACE_SEARCH_MAX_RESULTS=200
 EOF
 
 # Start the SQS worker
@@ -1002,6 +1006,8 @@ Use base URLs only for `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_AI_API_URL` (no `/
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins for FastAPI |
 | `TURNSTILE_SECRET`| Cloudflare Turnstile secret key for guest search verification |
 | `TURNSTILE_ALLOWED_HOSTNAMES` | Optional comma-separated Turnstile hostname allowlist (recommended in prod) |
+| `FACE_SEARCH_MATCH_THRESHOLD` | Cosine distance threshold for selfie matches (default: 0.70) |
+| `FACE_SEARCH_MAX_RESULTS` | Maximum number of matched photo IDs returned by AI search (default: 200) |
 
 ---
 

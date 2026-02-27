@@ -19,6 +19,27 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 DEEPFACE_TIMEOUT_SECS = 180
 
+def _env_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+FACE_SEARCH_MATCH_THRESHOLD = max(0.0, min(1.0, _env_float("FACE_SEARCH_MATCH_THRESHOLD", 0.70)))
+FACE_SEARCH_MAX_RESULTS = max(1, _env_int("FACE_SEARCH_MAX_RESULTS", 200))
+
 class DeepFaceTimeout(Exception):
     pass
 
@@ -219,15 +240,25 @@ async def search_faces(request: Request, album_id: str = Form(...), file: Upload
             cur = conn.cursor()
 
             query = """
-                SELECT DISTINCT p.id, pe.embedding <=> %s AS distance
+                SELECT p.id, MIN(pe.embedding <=> %s) AS best_distance
                 FROM photo_embeddings pe
                 JOIN photos p ON p.id = pe.photo_id
                 WHERE p.album_id = %s
-                  AND pe.embedding <=> %s <= 1.0
-                ORDER BY distance ASC
-                LIMIT 50;
+                GROUP BY p.id
+                HAVING MIN(pe.embedding <=> %s) <= %s
+                ORDER BY best_distance ASC
+                LIMIT %s;
             """
-            cur.execute(query, (embedding_str, album_id, embedding_str))
+            cur.execute(
+                query,
+                (
+                    embedding_str,
+                    album_id,
+                    embedding_str,
+                    FACE_SEARCH_MATCH_THRESHOLD,
+                    FACE_SEARCH_MAX_RESULTS,
+                ),
+            )
             results = cur.fetchall()
             cur.close()
         finally:
