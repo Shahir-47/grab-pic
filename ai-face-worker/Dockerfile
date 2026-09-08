@@ -26,5 +26,6 @@ RUN python -c "import numpy as np; from deepface import DeepFace; \
 DeepFace.represent(np.zeros((160,160,3), dtype='uint8'), model_name='GhostFaceNet', \
 detector_backend='retinaface', enforce_detection=False)"
 
-# Overridden to uvicorn for the search API; this is the queue worker.
-CMD ["python", "main.py"]
+# Role is chosen by START_CMD: unset runs the queue worker; the search API sets it to
+# "uvicorn api:app --host 0.0.0.0 --port 5000". exec keeps PID 1 so signals reach the app.
+CMD ["sh", "-c", "exec ${START_CMD:-python main.py}"]
