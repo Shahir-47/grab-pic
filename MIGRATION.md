@@ -180,37 +180,122 @@ To undo: copy the `.bak` back and restart cloudflared.
 
 ---
 
-## Step 5 — Deploy the three programs in Coolify (30 minutes)
+## Step 5 — Deploy the three programs in Coolify
 
-**Why:** This is the actual move. Three programs, all built from your existing GitHub repo.
+**Why:** This is the actual move.
 
-For each one: Coolify → **New Resource** → **Application** → point it at your repo → pick the
-folder → set the environment variables → **Deploy**.
+Push your changes first — Coolify builds from GitHub and can't see local files:
 
-| Name | Folder in repo | Web address | Start command |
+```bash
+git add ai-face-worker/requirements.txt ai-face-worker/Dockerfile MIGRATION.md
+git commit -m "Add Dockerfile for AI services, fix requirements.txt encoding"
+git push
+```
+
+For each app: Coolify → **New Resource** → **Application** → **Public Repository** →
+`https://github.com/Shahir-47/grab-pic` → Build Pack **Dockerfile**.
+
+| Setting | `grabpic-api` | `grabpic-worker` | `grabpic-ai` |
 |---|---|---|---|
-| `grabpic-api` | `api` | `http://grabpic-api.shahirahmed.com` | leave default |
-| `grabpic-worker` | `ai-face-worker` | none — it's a background job | `python main.py` |
-| `grabpic-ai` | `ai-face-worker` | `http://grabpic-ai.shahirahmed.com` | `uvicorn api:app --host 0.0.0.0 --port 5000` |
+| Base Directory | `/api` | `/ai-face-worker` | `/ai-face-worker` |
+| Dockerfile Location | `/api/Dockerfile` | `/ai-face-worker/Dockerfile` | `/ai-face-worker/Dockerfile` |
+| Port | `8080` | — | `5000` |
+| Domain | `http://grabpic-api.shahirahmed.com` | none | `http://grabpic-ai.shahirahmed.com` |
+| Start Command | default | default | `uvicorn api:app --host 0.0.0.0 --port 5000` |
 
-**Environment variables:** copy the ones you already have (they're listed in the
-[README](README.md#environment-variables)), and add the two keys from Step 2:
+`grabpic-worker` is a background job with no web address. Leave its health check disabled
+(Coolify's default) — it has no HTTP port to check.
+
+The two Python apps build the same image twice. That's ~5 minutes each, once.
+
+---
+
+### ⚠ The API needs the AWS key under **two** names
+
+`application.properties` reads `${AWS_ACCESS_KEY}` and `${AWS_SECRET_KEY}` **with no fallback
+value**. Spring Boot refuses to start if a placeholder can't be resolved — so even though the code
+ignores those two values, they must exist or the container crashes on boot.
+
+The AWS SDK separately reads the standard `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`.
+
+So set **all four**, with the same pair of values from Step 2.
+
+---
+
+### Environment variables
+
+**`grabpic-api`**
 
 ```
-AWS_ACCESS_KEY_ID      = (from step 2)
-AWS_SECRET_ACCESS_KEY  = (from step 2)
+PORT=8080
+DDL_AUTO=validate
+
+DB_URL=                          ← from App Runner console
+DB_USERNAME=                     ← from App Runner console
+DB_PASSWORD=                     ← from App Runner console
+
+AWS_REGION=us-east-2
+AWS_BUCKET_NAME=grabpic-upload-bucket
+AWS_SQS_URL=https://sqs.us-east-2.amazonaws.com/975050377466/grabpic-processing-queue
+
+AWS_ACCESS_KEY_ID=               ← Step 2 key
+AWS_SECRET_ACCESS_KEY=           ← Step 2 secret
+AWS_ACCESS_KEY=                  ← same key again (Spring placeholder)
+AWS_SECRET_KEY=                  ← same secret again (Spring placeholder)
+
+SUPABASE_VERIFY=                 ← from App Runner console
+SUPABASE_JWT_ISSUER=             ← from App Runner console
+
+REDIS_URL=                       ← your Upstash URL
+REDIS_SSL=true
+
+TURNSTILE_SECRET=                ← from App Runner console
+TURNSTILE_ALLOWED_HOSTNAMES=grab-pic.vercel.app
+CORS_ALLOWED_ORIGINS=https://grab-pic.vercel.app
 ```
 
-Three things that trip people up:
+Leave all `CLOUDFRONT_*` unset. The code falls back to S3 signed links on its own and logs
+`CloudFront not configured` — that's correct now.
 
-- Type the web address as **`http://`**, not `https://`. Cloudflare adds the padlock for you.
-  Typing `https://` makes Coolify try to get its own certificate, which fails through a tunnel.
-- The worker takes about **5 seconds** to load its models before it starts polling. Quick.
-- The names in the old README, `AWS_ACCESS_KEY` and `AWS_SECRET_KEY`, are dead — the code ignores
-  them. Use the longer names above.
+**`grabpic-worker`**
 
-**You'll know it worked:** all three show green in Coolify, and
-`https://grabpic-api.shahirahmed.com` responds instead of timing out.
+```
+AWS_REGION=us-east-2
+AWS_ACCESS_KEY_ID=               ← Step 2 key
+AWS_SECRET_ACCESS_KEY=           ← Step 2 secret
+AWS_BUCKET_NAME=grabpic-upload-bucket
+SQS_QUEUE_URL=https://sqs.us-east-2.amazonaws.com/975050377466/grabpic-processing-queue
+
+DB_HOST=                         ← Supabase host
+DB_NAME=postgres
+DB_USER=
+DB_PASSWORD=
+DB_PORT=5432
+```
+
+**`grabpic-ai`**
+
+```
+PORT=5000
+DB_HOST=                         ← same as worker
+DB_NAME=postgres
+DB_USER=
+DB_PASSWORD=
+DB_PORT=5432
+
+ALLOWED_ORIGINS=https://grab-pic.vercel.app
+TURNSTILE_SECRET=                ← same as the API
+TURNSTILE_ALLOWED_HOSTNAMES=grab-pic.vercel.app
+```
+
+Note `grabpic-ai` uses `ALLOWED_ORIGINS`, while `grabpic-api` uses `CORS_ALLOWED_ORIGINS`.
+Different names, same idea.
+
+**Type the domains as `http://`, not `https://`.** Cloudflare adds the padlock. Typing `https://`
+makes Coolify chase its own certificate, which fails through a tunnel.
+
+**You'll know it worked:** all three green in Coolify, and `https://grabpic-api.shahirahmed.com`
+answers instead of returning 404.
 
 ---
 
