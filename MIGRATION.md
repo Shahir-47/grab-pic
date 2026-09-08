@@ -210,15 +210,14 @@ The two Python apps build the same image twice. That's ~5 minutes each, once.
 
 ---
 
-### ⚠ The API needs the AWS key under **two** names
+### AWS credentials
 
-`application.properties` reads `${AWS_ACCESS_KEY}` and `${AWS_SECRET_KEY}` **with no fallback
-value**. Spring Boot refuses to start if a placeholder can't be resolved — so even though the code
-ignores those two values, they must exist or the container crashes on boot.
+Containers have no instance role, so the SDK reads the standard
+`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` environment variables instead.
 
-The AWS SDK separately reads the standard `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`.
-
-So set **all four**, with the same pair of values from Step 2.
+`application.properties` also declared `aws.s3.access-key` / `aws.s3.secret-key` from
+`${AWS_ACCESS_KEY}` / `${AWS_SECRET_KEY}`, but nothing ever read them — no `@Value`, no
+constructor. Those two lines have since been deleted, so only the two standard names are needed.
 
 ---
 
@@ -240,8 +239,6 @@ AWS_SQS_URL=https://sqs.us-east-2.amazonaws.com/975050377466/grabpic-processing-
 
 AWS_ACCESS_KEY_ID=               ← Step 2 key
 AWS_SECRET_ACCESS_KEY=           ← Step 2 secret
-AWS_ACCESS_KEY=                  ← same key again (Spring placeholder)
-AWS_SECRET_KEY=                  ← same secret again (Spring placeholder)
 
 SUPABASE_VERIFY=                 ← from App Runner console
 SUPABASE_JWT_ISSUER=             ← from App Runner console
