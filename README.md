@@ -284,7 +284,7 @@ sequenceDiagram
             Worker->>DB: Mark photo processed
             Worker->>SQS: Delete message
         else Deleted
-            Note over Worker: Skip; message returns<br>to the queue and expires
+            Note over Worker: Skip processing,<br>message returns to the queue<br>and expires
         end
     end
 ```
