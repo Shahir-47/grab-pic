@@ -351,6 +351,20 @@ Things that came up that the plan didn't predict:
 - **Cloudflare's free SSL only covers one subdomain level.** `api.grabpic.shahirahmed.com` would
   have had no certificate; `grabpic-api.shahirahmed.com` works.
 - **Coolify auto-assigns an sslip.io domain and port 3000** to every new app. Both need replacing.
+- **Supabase Realtime silently delivered nothing** — the dashboard's "Scanning..." badge never
+  cleared without a manual reload. The `photos` table *was* in the `supabase_realtime` publication
+  and *did* have a `SELECT` policy for `authenticated`, but its replica identity was `d` (primary
+  key only). The subscription filters on `album_id` and the RLS policy resolves
+  `album_id IN (select ... from shared_albums ...)` — neither is available from just the key, so
+  Realtime discarded every event at the RLS check. Fix, applied directly to the database:
+
+  ```sql
+  alter table public.photos replica identity full;
+  ```
+
+  **This lives only in the database, not in any migration file.** If the project is ever rebuilt
+  from scratch, re-apply it or live updates break again with no error message anywhere.
+  Pre-existing — unrelated to the migration.
 
 ---
 
