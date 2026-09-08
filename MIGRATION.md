@@ -34,7 +34,7 @@ already powered on.
 
 ---
 
-## Step 1 — Turn off the expensive stuff (10 minutes)
+## Step 1 — Turn off the expensive stuff ✅ DONE
 
 **Why:** This is where the $85 goes. Do this first and the bleeding stops today. Nothing breaks
 permanently — you can turn it back on any time.
@@ -61,7 +61,7 @@ Nitro. Your AWS bill next month should be a few dollars instead of eighty-five.
 
 ---
 
-## Step 2 — Make a key so your home server can reach the photos (10 minutes)
+## Step 2 — Make a key so your home server can reach the photos ✅ DONE
 
 **Why:** On Amazon's servers the app was allowed to touch your photos automatically. Running from
 home, it needs a username and password to prove it's allowed.
@@ -140,7 +140,7 @@ The face-recognition models are baked into the image, so there's no slow first-r
 
 ---
 
-## Step 4 — Give the two programs web addresses (15 minutes)
+## Step 4 — Give the two programs web addresses ✅ DONE
 
 **Why:** Your website lives on Vercel and needs a way to call your home server. Cloudflare Tunnel
 does this without opening any ports on your router or exposing your home IP address.
@@ -180,7 +180,7 @@ To undo: copy the `.bak` back and restart cloudflared.
 
 ---
 
-## Step 5 — Deploy the three programs in Coolify
+## Step 5 — Deploy the three programs in Coolify ✅ DONE
 
 **Why:** This is the actual move.
 
@@ -299,7 +299,7 @@ answers instead of returning 404.
 
 ---
 
-## Step 6 — Point the website at the new server (5 minutes)
+## Step 6 — Point the website at the new server ✅ DONE
 
 **Why:** Vercel is still calling the old Amazon addresses.
 
@@ -316,7 +316,7 @@ Then **Redeploy**.
 
 ---
 
-## Step 7 — Check it actually works
+## Step 7 — Check it actually works ✅ DONE
 
 Walk through the app like a normal user:
 
@@ -332,6 +332,28 @@ Walk through the app like a normal user:
 5 minutes. It tells you if the site goes down, *and* it stops Supabase from putting your free
 database to sleep — that happens after 7 days of no visitors, which would silently break the app
 right when a recruiter clicks your link.
+
+---
+
+## Notes from the actual migration
+
+Things that came up that the plan didn't predict:
+
+- **Coolify SSH permissions.** First deploy failed with "SSH keys storage directory is not writable."
+  `/data/coolify/ssh` was owned by UID 1000; Coolify runs as 9999. Fixed once with
+  `sudo chown -R 9999:9999 /data/coolify/ssh && sudo chmod -R 700 /data/coolify/ssh && docker restart coolify`.
+- **Supabase had auto-paused** after months idle — the pooler returned
+  `FATAL: (ENOTFOUND) tenant/user ... not found`. Restoring it from the dashboard fixed it.
+  This is exactly what the uptime-kuma check below prevents.
+- **Upstash Redis was gone entirely** (no DNS record) — free databases get reclaimed after long
+  inactivity. Replaced with a Redis container on Nitro, which is better anyway: no expiry, no
+  token to rotate, `REDIS_URL=redis://...` and `REDIS_SSL=false`.
+- **Coolify has no Start Command field for Dockerfile builds.** The worker and search API share one
+  image, so the Dockerfile's CMD became `exec ${START_CMD:-python main.py}` — the search API sets
+  `START_CMD`, the worker leaves it unset.
+- **Cloudflare's free SSL only covers one subdomain level.** `api.grabpic.shahirahmed.com` would
+  have had no certificate; `grabpic-api.shahirahmed.com` works.
+- **Coolify auto-assigns an sslip.io domain and port 3000** to every new app. Both need replacing.
 
 ---
 
