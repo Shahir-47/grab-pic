@@ -50,15 +50,15 @@ export default function Home() {
 
 				<div className="space-y-5 max-w-2xl">
 					<h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-zinc-900 dark:text-zinc-50 leading-[1.05]">
-						The smartest way to{" "}
+						Everyone gets{" "}
 						<span className="text-violet-600 dark:text-violet-400">
-							share event photos
+							their own photos
 						</span>
 					</h1>
 					<p className="text-lg sm:text-xl text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-xl mx-auto">
-						Upload your event photos and GrabPic finds every face. Each guest
-						gets a link, takes a quick selfie, and sees just the photos
-						they&apos;re in.
+						Upload the photos from your event, then send one link. Guests take a
+						selfie and get back the shots they&apos;re actually in, without
+						digging through the other four hundred.
 					</p>
 				</div>
 
@@ -87,7 +87,7 @@ export default function Home() {
 								onClick={() => router.push("/signup")}
 								className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-base font-bold shadow-lg"
 							>
-								Get Started Free
+								Create an account
 								<ArrowRight className="w-4 h-4 ml-2" />
 							</Button>
 							<Button
@@ -102,18 +102,15 @@ export default function Home() {
 				</div>
 
 				<p className="text-xs text-zinc-400 dark:text-zinc-500">
-					Free for up to 500 photos per user. No watermarks.
+					Free up to 500 photos. No watermarks.
 				</p>
 			</section>
 
 			<section aria-label="How it works" className="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
 				<div className="max-w-5xl mx-auto px-6 py-20">
 					<div className="text-center mb-14">
-						<p className="text-sm font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">
-							How it works
-						</p>
 						<h2 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-							Three steps. Done in minutes.
+							How it works
 						</h2>
 					</div>
 
@@ -122,20 +119,20 @@ export default function Home() {
 							{
 								step: "1",
 								icon: Upload,
-								title: "Upload your photos",
-								desc: "Drop all photos from your event into an album. Mark each one as public (anyone with the link) or protected (matched by face only), and switch to protected anytime to start AI scanning.",
+								title: "Upload the photos",
+								desc: "Drop the whole event into an album. Each photo is either public, meaning anyone with the link sees it, or protected, meaning only the people in it do. You can switch a photo over later and it gets scanned then.",
 							},
 							{
 								step: "2",
 								icon: ScanFace,
-								title: "AI scans every face",
-								desc: "GrabPic picks up every face in every photo on its own. You don't have to tag anything.",
+								title: "Faces get matched",
+								desc: "A background job finds the faces in each photo as it lands. There is nothing to tag and nothing to sort.",
 							},
 							{
 								step: "3",
 								icon: Share2,
-								title: "Share a single link",
-								desc: "Send one link to all your guests. Each person takes a selfie and instantly sees only the photos they appear in.",
+								title: "Send one link",
+								desc: "Everyone gets the same link. They take a selfie, and what comes back is only the photos with them in it.",
 							},
 						].map((item) => (
 							<div
@@ -164,11 +161,8 @@ export default function Home() {
 
 			<section aria-label="Features" className="max-w-5xl mx-auto px-6 py-20">
 				<div className="text-center mb-14">
-					<p className="text-sm font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">
-						Built for real events
-					</p>
 					<h2 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-						Simple tools for a real problem
+						What you get
 					</h2>
 				</div>
 
@@ -176,38 +170,38 @@ export default function Home() {
 					{[
 						{
 							icon: ScanFace,
-							title: "AI Face Matching",
-							desc: "Guests take one selfie and GrabPic pulls up every photo they appear in across the whole album.",
+							title: "Face search",
+							desc: "One selfie is enough. It runs against every face in the album and returns the matches.",
 							color: "text-violet-500",
 						},
 						{
 							icon: Lock,
-							title: "Privacy by Default",
-							desc: "Every photo is protected by default. Guests take a selfie and only see photos that match their face.",
+							title: "Protected by default",
+							desc: "A photo you upload is private until someone's face matches it. You have to opt a photo out, not in.",
 							color: "text-emerald-500",
 						},
 						{
 							icon: Globe,
-							title: "Public & Protected Modes",
-							desc: "Public photos are visible to anyone with the album link. Protected photos are shown only to matched faces, and photos switched to protected are auto-queued for AI scanning.",
+							title: "Public photos too",
+							desc: "Venue shots and wide crowd shots can be public, visible to anyone with the link. Flip a photo back to protected and it gets queued for scanning again.",
 							color: "text-blue-500",
 						},
 						{
 							icon: Download,
-							title: "Bulk Zip Downloads",
-							desc: "Guests can select their photos and download them all at once as a zip file. No sign-up required for guests.",
+							title: "Zip downloads",
+							desc: "Select a few photos or take the lot, and they come down as one zip.",
 							color: "text-amber-500",
 						},
 						{
 							icon: Camera,
-							title: "Built-in Selfie Camera",
-							desc: "Guests don't need to upload a file. They can take a selfie right from the browser on any device.",
+							title: "Camera in the browser",
+							desc: "Nothing to install and no file to find. The selfie is taken on the page, on a phone or a laptop.",
 							color: "text-pink-500",
 						},
 						{
 							icon: Users,
-							title: "Unlimited Guests",
-							desc: "Share one link. Every guest gets their own personalized experience without creating an account.",
+							title: "No guest accounts",
+							desc: "Guests never sign up for anything. Share the link with as many people as you like.",
 							color: "text-cyan-500",
 						},
 					].map((feature) => (
@@ -231,11 +225,8 @@ export default function Home() {
 
 			<section aria-label="Use cases" className="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
 				<div className="max-w-4xl mx-auto px-6 py-20 text-center">
-					<p className="text-sm font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-3">
-						Perfect for
-					</p>
 					<h2 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 mb-10">
-						Any event with a camera
+						Where people use it
 					</h2>
 
 					<div className="flex flex-wrap justify-center gap-3">
@@ -264,13 +255,13 @@ export default function Home() {
 			<section aria-label="Call to action" className="max-w-3xl mx-auto px-6 py-20 text-center space-y-6">
 				<h2 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
 					{isLoggedIn
-						? "Ready for your next event?"
+						? "Got another event coming up?"
 						: "Stop texting photos one by one"}
 				</h2>
 				<p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto">
 					{isLoggedIn
-						? "Create a new album and share it with your guests in seconds."
-						: "Set up your first album in under a minute. Your guests will love it."}
+						? "Make an album, upload, send the link."
+						: "Making the first album takes about a minute."}
 				</p>
 				<Button
 					onClick={() => router.push(isLoggedIn ? "/dashboard" : "/signup")}
@@ -283,7 +274,7 @@ export default function Home() {
 						</>
 					) : (
 						<>
-							Get Started Free
+							Create an account
 							<ArrowRight className="w-4 h-4 ml-2" />
 						</>
 					)}

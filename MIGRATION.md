@@ -14,8 +14,8 @@ Amazon S3 (that part costs about a dollar). Your website, login, and database do
 Right now Amazon runs two computers for you 24/7 and charges ~$85/month, even when nobody visits.
 One runs the main API, the other runs the face-recognition programs. Your Nitro box is already on
 24/7 doing nothing with 24 GB of spare memory. So you move those two jobs onto it. Amazon keeps
-storing the actual photo files, which is cheap. Everything else — the website on Vercel, the login
-and database on Supabase — is already free and doesn't get touched.
+storing the actual photo files, which is cheap. Everything else is already free and doesn't get
+touched: the website on Vercel, the login and database on Supabase.
 
 ---
 
@@ -28,16 +28,16 @@ and database on Supabase — is already free and doesn't get touched.
 | After Step 8 (old servers deleted) | **~$1** |
 
 The final ~$1 is Amazon storing your photos, about 2¢ per GB. The $3–7 in between is the stopped
-EC2's disk plus an Elastic IP if you have one; both go away at Step 8. Everything else — SQS,
-Vercel, Supabase, Upstash, Turnstile, Cloudflare Tunnel — is free at your size, and Nitro is
-already powered on.
+EC2's disk plus an Elastic IP if you have one; both go away at Step 8. SQS, Vercel, Supabase,
+Upstash, Turnstile and Cloudflare Tunnel are all free at your size, and Nitro is already powered
+on.
 
 ---
 
-## Step 1 — Turn off the expensive stuff ✅ DONE
+## Step 1: Turn off the expensive stuff (done)
 
 **Why:** This is where the $85 goes. Do this first and the bleeding stops today. Nothing breaks
-permanently — you can turn it back on any time.
+permanently, and you can turn it back on any time.
 
 **First: set the region.** Everything you own lives in **US East (Ohio)**. If the console shows
 N. Virginia (the default) your services will look like they don't exist. Top right of the page →
@@ -49,19 +49,19 @@ click the region name → pick **US East (Ohio)**.
    **Do not click Terminate.** Stop is reversible; Terminate deletes it.
 3. Leave **S3** alone. Your photos are in there.
 
-While you're in the console, click **Billing → Bills** and note the real monthly total — the
+While you're in the console, click **Billing → Bills** and note the real monthly total. The
 numbers in this guide are estimates from the architecture, not from your account.
 
-**You'll know it worked:** the app stops responding. That's expected — you'll bring it back on
+**You'll know it worked:** the app stops responding. That's expected; you'll bring it back on
 Nitro. Your AWS bill next month should be a few dollars instead of eighty-five.
 
 > **Pause, don't delete.** AWS stopped accepting new App Runner customers on April 30, 2026.
 > Existing services keep running, but if you delete yours you probably can't create another.
-> Pausing is fully reversible — deleting is a one-way door. That's why Step 8 waits a week.
+> Pausing is fully reversible. Deleting is a one-way door. That's why Step 8 waits a week.
 
 ---
 
-## Step 2 — Make a key so your home server can reach the photos ✅ DONE
+## Step 2: Make a key so your home server can reach the photos (done)
 
 **Why:** On Amazon's servers the app was allowed to touch your photos automatically. Running from
 home, it needs a username and password to prove it's allowed.
@@ -70,7 +70,7 @@ Your existing resources, all in Ohio: bucket `grabpic-upload-bucket`, queue
 `grabpic-processing-queue`, and its dead-letter queue `grabpic-processing-dlq`.
 
 The policies already in your account were attached to *roles* that App Runner and EC2 used. A user
-can't use those, and the S3 policy you had grants no SQS access — so make one new policy covering
+can't use those, and the S3 policy you had grants no SQS access, so make one new policy covering
 both.
 
 **1. IAM → Policies → Create policy → JSON tab**, paste this, name it `grabpic-nitro-policy`:
@@ -113,34 +113,34 @@ both.
 **3.** Open the user → **Security credentials** → **Create access key** →
 **Application running outside AWS**
 
-**Copy both values now** — the secret is shown once. They go into Coolify in Step 5.
+**Copy both values now.** The secret is shown once. They go into Coolify in Step 5.
 
 ---
 
-## Step 3 — Fix two files ✅ DONE
+## Step 3: Fix two files (done)
 
 **Why:** The Python part couldn't be packaged as-is. Two problems, neither one app logic:
 
-- `requirements.txt` was saved as UTF-16, which pip cannot read — now UTF-8
-- `slowapi` was missing from it despite being imported in `api.py` — now added
+- `requirements.txt` was saved as UTF-16, which pip cannot read. Now UTF-8.
+- `slowapi` was missing from it despite being imported in `api.py`. Now added.
 
 Plus a new `ai-face-worker/Dockerfile`, the recipe Coolify uses to build the Python program.
 Nothing existing was rewritten.
 
-**Verified on Nitro** — built clean and benchmarked:
+**Verified on Nitro.** Built clean and benchmarked:
 
 | | |
 |---|---|
 | Cold start (model load + first 12 MP photo) | 5.3s |
 | Each photo after that | 1.0s |
 | Memory per process | 1.8 GB |
-| GPU used | none — Immich keeps it |
+| GPU used | none, Immich keeps it |
 
 The face-recognition models are baked into the image, so there's no slow first-request download.
 
 ---
 
-## Step 4 — Give the two programs web addresses ✅ DONE
+## Step 4: Give the two programs web addresses (done)
 
 **Why:** Your website lives on Vercel and needs a way to call your home server. Cloudflare Tunnel
 does this without opening any ports on your router or exposing your home IP address.
@@ -180,11 +180,11 @@ To undo: copy the `.bak` back and restart cloudflared.
 
 ---
 
-## Step 5 — Deploy the three programs in Coolify ✅ DONE
+## Step 5: Deploy the three programs in Coolify (done)
 
 **Why:** This is the actual move.
 
-Push your changes first — Coolify builds from GitHub and can't see local files:
+Push your changes first, since Coolify builds from GitHub and can't see local files:
 
 ```bash
 git add ai-face-worker/requirements.txt ai-face-worker/Dockerfile MIGRATION.md
@@ -199,12 +199,12 @@ For each app: Coolify → **New Resource** → **Application** → **Public Repo
 |---|---|---|---|
 | Base Directory | `/api` | `/ai-face-worker` | `/ai-face-worker` |
 | Dockerfile Location | `/api/Dockerfile` | `/ai-face-worker/Dockerfile` | `/ai-face-worker/Dockerfile` |
-| Port | `8080` | — | `5000` |
+| Port | `8080` | n/a | `5000` |
 | Domain | `http://grabpic-api.shahirahmed.com` | none | `http://grabpic-ai.shahirahmed.com` |
 | Start Command | default | default | `uvicorn api:app --host 0.0.0.0 --port 5000` |
 
 `grabpic-worker` is a background job with no web address. Leave its health check disabled
-(Coolify's default) — it has no HTTP port to check.
+(Coolify's default), since it has no HTTP port to check.
 
 The two Python apps build the same image twice. That's ~5 minutes each, once.
 
@@ -216,7 +216,7 @@ Containers have no instance role, so the SDK reads the standard
 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` environment variables instead.
 
 `application.properties` also declared `aws.s3.access-key` / `aws.s3.secret-key` from
-`${AWS_ACCESS_KEY}` / `${AWS_SECRET_KEY}`, but nothing ever read them — no `@Value`, no
+`${AWS_ACCESS_KEY}` / `${AWS_SECRET_KEY}`, but nothing ever read them: no `@Value`, no
 constructor. Those two lines have since been deleted, so only the two standard names are needed.
 
 ---
@@ -252,7 +252,7 @@ CORS_ALLOWED_ORIGINS=https://grab-pic.vercel.app
 ```
 
 Leave all `CLOUDFRONT_*` unset. The code falls back to S3 signed links on its own and logs
-`CloudFront not configured` — that's correct now.
+`CloudFront not configured`, which is correct now.
 
 **`grabpic-worker`**
 
@@ -296,7 +296,7 @@ answers instead of returning 404.
 
 ---
 
-## Step 6 — Point the website at the new server ✅ DONE
+## Step 6: Point the website at the new server (done)
 
 **Why:** Vercel is still calling the old Amazon addresses.
 
@@ -307,19 +307,19 @@ NEXT_PUBLIC_API_URL     = https://grabpic-api.shahirahmed.com
 NEXT_PUBLIC_AI_API_URL  = https://grabpic-ai.shahirahmed.com
 ```
 
-`https://` here — that's the public address. No `/api` on the end, no slash on the end.
+`https://` here, because that's the public address. No `/api` on the end, no slash on the end.
 
 Then **Redeploy**.
 
 ---
 
-## Step 7 — Check it actually works ✅ DONE
+## Step 7: Check it actually works (done)
 
 Walk through the app like a normal user:
 
 - [ ] Log in
 - [ ] Create an album and upload a photo
-- [ ] In Coolify, open the `grabpic-worker` logs — you should see `Found N faces` then
+- [ ] In Coolify, open the `grabpic-worker` logs. You should see `Found N faces` then
       `Saved to Database`
 - [ ] The photo shows as processed
 - [ ] Open the guest link, upload a selfie, get matches back
@@ -327,7 +327,7 @@ Walk through the app like a normal user:
 
 **One last thing:** open Uptime Kuma (already running on Nitro) and add a check on your site every
 5 minutes. It tells you if the site goes down, *and* it stops Supabase from putting your free
-database to sleep — that happens after 7 days of no visitors, which would silently break the app
+database to sleep, which happens after 7 days of no visitors and would silently break the app
 right when a recruiter clicks your link.
 
 ---
@@ -339,23 +339,23 @@ Things that came up that the plan didn't predict:
 - **Coolify SSH permissions.** First deploy failed with "SSH keys storage directory is not writable."
   `/data/coolify/ssh` was owned by UID 1000; Coolify runs as 9999. Fixed once with
   `sudo chown -R 9999:9999 /data/coolify/ssh && sudo chmod -R 700 /data/coolify/ssh && docker restart coolify`.
-- **Supabase had auto-paused** after months idle — the pooler returned
+- **Supabase had auto-paused** after months idle, and the pooler returned
   `FATAL: (ENOTFOUND) tenant/user ... not found`. Restoring it from the dashboard fixed it.
   This is exactly what the uptime-kuma check below prevents.
-- **Upstash Redis was gone entirely** (no DNS record) — free databases get reclaimed after long
+- **Upstash Redis was gone entirely** (no DNS record). Free databases get reclaimed after long
   inactivity. Replaced with a Redis container on Nitro, which is better anyway: no expiry, no
   token to rotate, `REDIS_URL=redis://...` and `REDIS_SSL=false`.
 - **Coolify has no Start Command field for Dockerfile builds.** The worker and search API share one
-  image, so the Dockerfile's CMD became `exec ${START_CMD:-python main.py}` — the search API sets
+  image, so the Dockerfile's CMD became `exec ${START_CMD:-python main.py}`. The search API sets
   `START_CMD`, the worker leaves it unset.
 - **Cloudflare's free SSL only covers one subdomain level.** `api.grabpic.shahirahmed.com` would
   have had no certificate; `grabpic-api.shahirahmed.com` works.
 - **Coolify auto-assigns an sslip.io domain and port 3000** to every new app. Both need replacing.
-- **Supabase Realtime silently delivered nothing** — the dashboard's "Scanning..." badge never
+- **Supabase Realtime silently delivered nothing.** The dashboard's "Scanning..." badge never
   cleared without a manual reload. The `photos` table *was* in the `supabase_realtime` publication
   and *did* have a `SELECT` policy for `authenticated`, but its replica identity was `d` (primary
   key only). The subscription filters on `album_id` and the RLS policy resolves
-  `album_id IN (select ... from shared_albums ...)` — neither is available from just the key, so
+  `album_id IN (select ... from shared_albums ...)`. Neither is available from just the key, so
   Realtime discarded every event at the RLS check. Fix, applied directly to the database:
 
   ```sql
@@ -364,14 +364,14 @@ Things that came up that the plan didn't predict:
 
   **This lives only in the database, not in any migration file.** If the project is ever rebuilt
   from scratch, re-apply it or live updates break again with no error message anywhere.
-  Pre-existing — unrelated to the migration.
+  Pre-existing, and unrelated to the migration.
 
 ---
 
-## Step 8 — Delete the old AWS stuff (wait a week first)
+## Step 8: Delete the old AWS stuff (wait a week first)
 
-Once it's been working for a week, delete **only the two computers.** Keep S3 and SQS — the app
-still uses them.
+Once it's been working for a week, delete **only the two computers.** Keep S3 and SQS, since the
+app still uses them.
 
 - Delete the App Runner service
 - **Terminate** the EC2 instance and delete its disk

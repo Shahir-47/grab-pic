@@ -355,15 +355,15 @@ export default function GuestWelcomePage() {
 							{albumTitle}
 						</h1>
 						<p className="text-zinc-500 mt-3 text-sm leading-relaxed">
-							Browse the public gallery below, or take a selfie to find
-							protected photos that match your face.
+							Browse the public photos below, or take a selfie to find the
+							protected ones you appear in.
 						</p>
 					</div>
 
 					<div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-6">
 						<div className="flex items-center justify-center gap-2 text-sm font-bold text-zinc-700 dark:text-zinc-300">
 							<UserSearch className="w-4 h-4 text-violet-500" />
-							AI Photo Finder
+							Find your photos
 						</div>
 
 						{isCameraOpen && !selfie ? (

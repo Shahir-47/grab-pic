@@ -202,7 +202,7 @@ export default function AlbumViewPage() {
 		const photoWord = count === 1 ? "photo" : "photos";
 		const message = makePublic
 			? `Make ${count} ${photoWord} public?\n\nPublic photos are visible to anyone with the album link.`
-			: `Make ${count} ${photoWord} protected?\n\nProtected photos are only shown to the people in them, matched by facial recognition.\n\nAny unscanned photo switched from public will start AI scanning automatically.`;
+			: `Make ${count} ${photoWord} protected?\n\nProtected photos are only shown to the people in them, matched by facial recognition.\n\nAnything switched over from public gets queued for scanning if it has not been scanned yet.`;
 		const confirmToggle = window.confirm(message);
 		if (!confirmToggle) return;
 
@@ -594,10 +594,10 @@ export default function AlbumViewPage() {
 						<div className="flex justify-between items-center p-4 sm:p-6 border-b border-zinc-800">
 							<div>
 								<h3 className="text-white font-bold text-lg">
-									AI Inspection Mode
+									Detected faces
 								</h3>
 								<p className="text-zinc-400 text-xs mt-0.5">
-									{selectedPhoto.faceCount} signatures found.
+									{selectedPhoto.faceCount} found in this photo.
 								</p>
 							</div>
 

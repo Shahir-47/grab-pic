@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "GrabPic — AI Photo Sharing for Events";
+export const alt = "GrabPic: Event Photo Sharing with Face Search";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -76,7 +76,7 @@ export default function OGImage() {
 						marginBottom: 24,
 					}}
 				>
-					AI Photo Sharing for Events
+					Event photo sharing with face search
 				</div>
 
 				<div
@@ -88,8 +88,8 @@ export default function OGImage() {
 						lineHeight: 1.5,
 					}}
 				>
-					Upload event photos. Share one link. Each guest takes a selfie and
-					instantly finds every photo they appear in.
+					Upload the photos from your event and share one link. Guests take a
+					selfie and get back the photos they appear in.
 				</div>
 			</div>
 		),

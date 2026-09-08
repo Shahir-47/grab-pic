@@ -19,29 +19,25 @@ const SITE_URL = "https://grab-pic.vercel.app";
 export const metadata: Metadata = {
 	metadataBase: new URL(SITE_URL),
 	title: {
-		default: "GrabPic — AI Photo Sharing for Events",
+		default: "GrabPic: Event Photo Sharing with Face Search",
 		template: "%s | GrabPic",
 	},
 	description:
-		"Upload event photos, share one link, and let each guest take a selfie to instantly find every photo they appear in. Use public and protected privacy modes, and auto-scan newly protected photos with AI.",
+		"Upload the photos from your event and share one link. Guests take a selfie and get back the photos they appear in. Photos are protected by default, or public if you want everyone to see them.",
 	keywords: [
 		"event photos",
-		"AI photo sharing",
-		"facial recognition photo app",
-		"wedding photo sharing",
 		"photo sharing app",
+		"wedding photo sharing",
 		"find my photos",
 		"selfie photo finder",
+		"face recognition",
 		"event photography",
 		"GrabPic",
-		"face recognition",
-		"bulk photo download",
-		"guest photo sharing",
 	],
 	openGraph: {
-		title: "GrabPic — AI Photo Sharing for Events",
+		title: "GrabPic: Event Photo Sharing with Face Search",
 		description:
-			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie. Public/protected modes included.",
+			"Upload the photos from your event, share one link, and each guest finds the photos they appear in with a selfie.",
 		type: "website",
 		siteName: "GrabPic",
 		url: SITE_URL,
@@ -49,9 +45,9 @@ export const metadata: Metadata = {
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "GrabPic — AI Photo Sharing for Events",
+		title: "GrabPic: Event Photo Sharing with Face Search",
 		description:
-			"Upload event photos, share one link, and each guest finds exactly the photos they appear in with a selfie. Public/protected modes included.",
+			"Upload the photos from your event, share one link, and each guest finds the photos they appear in with a selfie.",
 		creator: "@grabpic",
 	},
 	robots: {
@@ -93,7 +89,7 @@ export default function RootLayout({
 							name: "GrabPic",
 							url: "https://grab-pic.vercel.app",
 							description:
-								"AI-powered event photo sharing with facial recognition. Upload event photos, share one link, and each guest finds their photos with a selfie. Switch photos between public and protected anytime.",
+								"Event photo sharing with face search. Upload the photos, share one link, and each guest finds their own with a selfie. Photos can be switched between public and protected at any time.",
 							applicationCategory: "PhotographyApplication",
 							operatingSystem: "Web",
 							offers: {
@@ -102,12 +98,12 @@ export default function RootLayout({
 								priceCurrency: "USD",
 							},
 							featureList: [
-								"AI facial recognition photo matching",
-								"Instant selfie-based photo search",
+								"Photo matching by facial recognition",
+								"Selfie-based photo search",
 								"Bulk ZIP photo downloads",
 								"Public and protected photo privacy modes",
-								"Automatic AI re-queue when switching photos to protected",
-								"Built-in selfie camera",
+								"Re-queues photos for scanning when switched to protected",
+								"Selfie camera in the browser",
 								"QR code album sharing",
 								"No guest account required",
 							],
